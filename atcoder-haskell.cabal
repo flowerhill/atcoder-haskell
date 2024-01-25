@@ -36,6 +36,13 @@ executable atcoder-haskell
                       bytestring,
                       vector,
                       containers,
-                      array
+                      array,
+                      vector-algorithms,
+                      unordered-containers,
+                      random,
+                      QuickCheck,
+                      doctest,
+                      hspec,
+                      split
     hs-source-dirs:   app
     default-language: Haskell2010
