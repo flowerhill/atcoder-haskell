@@ -1,5 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -28,7 +26,7 @@ import Debug.Trace (traceShow, traceShowId)
 main :: IO ()
 main = do
   getLine
-  as <- readInputIntList
+  as <- readInputInts
 
   let asZipSorted = IM.fromList zip [1 ..] as
 
@@ -59,8 +57,8 @@ judge g
 readInt :: IO Int
 readInt = readLn
 
-readInputIntList :: IO [Int]
-readInputIntList = L.unfoldr (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
+readInputInts :: IO [Int]
+readInputInts = L.unfoldr (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
 
 readPairInt :: IO (Int, Int)
 readPairInt = (\[a, b] -> (a, b)) . parseLineIntList <$> BS.getLine
@@ -119,3 +117,20 @@ sieve n = go 2 (IntSet.fromList [2 .. n])
     go p s
       | p * p > n = s
       | otherwise = go (p + 1) (IntSet.difference s (IntSet.fromList [p * p, p * p + p .. n]))
+
+printIntGrid :: (Show e, IArray a e, Ix v) => a (v, Int) e -> IO ()
+printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elems grid)
+  where
+    ((_, w1), (_, w2)) = bounds grid
+    w = w2 + 1 - w1
+
+bfs :: Int -> Graph -> Seq.Seq (Int, Int) -> M.Map Int Int -> M.Map Int Int
+bfs n g queue visited
+  | null queue = visited
+bfs n g ((q, l) Seq.:<| queue) visited
+  | M.member q visited = bfs n g queue visited
+  | otherwise =
+      let visited' = M.insert q l visited
+          next = g A.! q
+          queue' = queue Seq.>< Seq.fromList (L.map (,succ l) next)
+       in bfs n g queue' visited'

@@ -1,30 +1,40 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
 
-import Data.Array.IArray
-import Data.Array.Unboxed (UArray)
+import Control.Monad (replicateM, when)
+import Control.Monad.ST
+import Control.Monad.State
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Char as C
+import qualified Data.IntMap as IM
 import qualified Data.List as L
-import Data.Maybe (catMaybes)
-import qualified Data.Vector.Unboxed as V
+import Data.Maybe
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
+import Debug.Trace (traceShow, traceShowId)
+
+data Query = Add String | Print | Del
 
 main :: IO ()
 main = do
-  [n, _] <- L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
-  !xs <- L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
+  !n <- readLn @Int
+  !qs <- replicateM n $ do
+    query <- words <$> getLine
+    return $ case query of
+      ["1", x] -> Add x
+      ["2"] -> Print
+      ["3"] -> Del
 
-  print $ solve n xs
+  solve qs []
 
-solve :: Int -> [Int] -> Int
-solve n xs = minimum $ L.scanl1 (+) $ elems da
-  where
-    da =
-      accumArray @UArray
-        (+)
-        0
-        (1, n)
-        [ p | (a, b) <- L.zipWith (\a b -> (if a <= b then (a, b) else (b, a))) xs (tail xs), let df = b - a, let db = n - df, p <- [(1, df), (a, db - df), (b, df - db)]
-        ]
+solve :: [Query] -> [String] -> IO ()
+solve [] _ = return ()
+solve qs@((Add x) : qs') xs = solve qs' (x : xs)
+solve qs@(Print : qs') stack@(x : _) = do
+  putStrLn x
+  solve qs' stack
+solve (Del : qs') (x : xs') = solve qs' xs'
