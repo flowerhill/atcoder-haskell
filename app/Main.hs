@@ -5,36 +5,37 @@
 
 module Main where
 
-import Control.Monad (replicateM, when)
-import Control.Monad.ST
-import Control.Monad.State
+import Control.Monad
+import Data.Array.IArray
+import qualified Data.Array.IArray as IA
+import Data.Array.Unboxed
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Char as C
-import qualified Data.IntMap as IM
+import qualified Data.Heap as H
 import qualified Data.List as L
 import Data.Maybe
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
-import Debug.Trace (traceShow, traceShowId)
+import Debug.Trace (traceShow)
 
-data Query = Add String | Print | Del
+data Query = Add Int | Print | Del
 
 main :: IO ()
 main = do
-  !n <- readLn @Int
-  !qs <- replicateM n $ do
+  q <- readLn @Int
+  qs <- replicateM q do
     query <- words <$> getLine
     return $ case query of
-      ["1", x] -> Add x
+      ["1", x] -> Add $ read x
       ["2"] -> Print
       ["3"] -> Del
 
-  solve qs []
+  solve qs H.empty
 
-solve :: [Query] -> [String] -> IO ()
+solve :: [Query] -> H.Heap Int -> IO ()
 solve [] _ = return ()
-solve qs@((Add x) : qs') xs = solve qs' (x : xs)
-solve qs@(Print : qs') stack@(x : _) = do
-  putStrLn x
-  solve qs' stack
-solve (Del : qs') (x : xs') = solve qs' xs'
+solve (Add s : qs') h = do
+  solve qs' (H.insert s h)
+solve (Print : qs') h = do
+  print $ minimum h
+  solve qs' h
+solve (Del : qs') h = do
+  solve qs' (H.deleteMin h)

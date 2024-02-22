@@ -1,4 +1,4 @@
-{-# LANGUAGE MultiWayIf #-}
+-- {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -58,10 +58,10 @@ readInt :: IO Int
 readInt = readLn
 
 readInputInts :: IO [Int]
-readInputInts = L.unfoldr (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
+readInputInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
 readPairInt :: IO (Int, Int)
-readPairInt = (\[a, b] -> (a, b)) . parseLineIntList <$> BS.getLine
+readPairInt = (\[a, b] -> (a, b)) . parseLineIntList <$> BC.getLine
 
 readIntPairIntLineV :: Int -> IO (V.Vector (Int, Int))
 readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
@@ -69,8 +69,8 @@ readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
 readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
 readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
 
-parseLineIntList :: BS.ByteString -> [Int]
-parseLineIntList = L.unfoldr (BS.readInt . BS.dropWhile isSpace)
+parseLineIntList :: BC.ByteString -> [Int]
+parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
 
 readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
@@ -134,3 +134,26 @@ bfs n g ((q, l) Seq.:<| queue) visited
           next = g A.! q
           queue' = queue Seq.>< Seq.fromList (L.map (,succ l) next)
        in bfs n g queue' visited'
+
+dfs :: Graph -> IS.IntSet -> Int -> IS.IntSet
+dfs g seen v
+  | IS.member v seen = seen
+  | otherwise = L.foldl' (dfs g) seen' next_vs
+  where
+    next_vs = g IA.! v
+    seen' = IS.insert v seen
+
+move :: Char -> (Int, Int) -> (Int, Int)
+move 'L' (i, j) = (i, j - 1)
+move 'R' (i, j) = (i, j + 1)
+move 'U' (i, j) = (i - 1, j)
+move 'D' (i, j) = (i + 1, j)
+move _ pos = pos
+
+{-  data Query = Add String | Print | Del
+    qs <- replicateM q do
+    query <- words <$> getLine
+    return $ case query of
+      ["1", x] -> Add x
+      ["2"] -> Print
+      ["3"] -> Del -}

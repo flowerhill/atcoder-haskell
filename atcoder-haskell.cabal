@@ -43,6 +43,7 @@ executable atcoder-haskell
                       QuickCheck,
                       doctest,
                       hspec,
-                      split
+                      split,
+                      heaps
     hs-source-dirs:   app
     default-language: Haskell2010
