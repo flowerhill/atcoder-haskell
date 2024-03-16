@@ -1,41 +1,33 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# HLINT ignore "Use lambda-case" #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Main where
 
 import Control.Monad
-import Data.Array.IArray
-import qualified Data.Array.IArray as IA
-import Data.Array.Unboxed
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Char as C
-import qualified Data.Heap as H
+import qualified Data.HashSet as HS
 import qualified Data.List as L
-import Data.Maybe
-import Debug.Trace (traceShow)
-
-data Query = Add Int | Print | Del
 
 main :: IO ()
 main = do
-  q <- readLn @Int
-  qs <- replicateM q do
-    query <- words <$> getLine
-    return $ case query of
-      ["1", x] -> Add $ read x
-      ["2"] -> Print
-      ["3"] -> Del
+  _ <- readLn @Int
+  as <- readInputInts
+  _ <- readLn @Int
+  bs <- readInputInts
+  _ <- readLn @Int
+  cs <- readInputInts
+  _ <- readLn @Int
+  xs <- readInputInts
 
-  solve qs H.empty
+  let sums = HS.fromList [x + y + z | x <- as, y <- bs, z <- cs]
 
-solve :: [Query] -> H.Heap Int -> IO ()
-solve [] _ = return ()
-solve (Add s : qs') h = do
-  solve qs' (H.insert s h)
-solve (Print : qs') h = do
-  print $ minimum h
-  solve qs' h
-solve (Del : qs') h = do
-  solve qs' (H.deleteMin h)
+  forM_ xs (\x -> putStrLn if HS.member x sums then "Yes" else "No")
+
+readInputInts :: IO [Int]
+readInputInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine

@@ -1,4 +1,4 @@
--- {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -14,6 +14,7 @@ import Control.Monad.State
 import Data.Array.IArray
 import qualified Data.ByteString.Char8 as BS
 import Data.Char (GeneralCategory (Control), digitToInt, isSpace, readLitChar)
+import qualified Data.Graph as G
 import qualified Data.IntSet as IntSet
 import Data.Ix
 import qualified Data.List as L
@@ -151,9 +152,36 @@ move 'D' (i, j) = (i + 1, j)
 move _ pos = pos
 
 {-  data Query = Add String | Print | Del
+main :: iO ()
+main = do
     qs <- replicateM q do
     query <- words <$> getLine
     return $ case query of
       ["1", x] -> Add x
       ["2"] -> Print
       ["3"] -> Del -}
+
+{- main :: IO ()
+main = do
+  [n, m] <- readInputInts
+  abs <- fmap concat <$> replicateM m $ do
+    [a, b] <- readInputInts
+    return [(a, b), (b, a)] -}
+
+isCube :: Int -> Bool
+isCube n = cubeRoot ^ 3 == n
+  where
+    cubeRoot = round (fromIntegral n ** (1 / 3 :: Double))
+
+isPalindrome :: Int -> Bool
+isPalindrome n =
+  if even numDigits
+    then leftHalf == reverse rightHalf
+    else leftHalf == reverse (tail rightHalf)
+  where
+    str = show n
+    numDigits = length str
+    (leftHalf, rightHalf) = splitAt (numDigits `div` 2) str
+
+{- memo回文平方数を求める処理 -}
+{-   let lst = filter isPalindrome $ map (^ 3) [1 .. 1000000] -}
