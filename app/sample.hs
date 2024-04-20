@@ -185,3 +185,25 @@ isPalindrome n =
 
 {- memo回文平方数を求める処理 -}
 {-   let lst = filter isPalindrome $ map (^ 3) [1 .. 1000000] -}
+
+quicksort :: Ord a => [a] -> [a]
+quicksort [] = []
+quicksort (x : xs) =
+  let smallerSorted = quicksort [a | a <- xs, a <= x]
+      biggerSorted = quicksort [a | a <- xs, a > x]
+   in smallerSorted ++ [x] ++ biggerSorted
+
+swapList :: Int -> Int -> [a] -> [a]
+swapList i j xs
+  | i < 0 || i >= length xs || j < 0 || j >= length xs = xs
+  | otherwise =
+      let (ys, x : zs) = splitAt i xs
+          (ws, y : vs) = splitAt (j - i - 1) zs
+       in ys ++ [y] ++ ws ++ [x] ++ vs
+
+swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
+swapArray as i j = do
+  !a <- readArray as i
+  !b <- readArray as j
+  writeArray as j a
+  writeArray as i b
