@@ -24,54 +24,29 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
 import Debug.Trace (traceShow, traceShowId)
 
-main :: IO ()
-main = do
-  getLine
-  as <- readInputInts
-
-  let asZipSorted = IM.fromList zip [1 ..] as
-
-  print $ solve asZipSorted
-
-solve :: V.Vector (Int, Int) -> [Int]
-solve v = go (V.head v) []
-  where
-    go :: (Int, Int) -> [Int] -> [Int]
-    go e lst
-      | snd e == -1 = go (bSearch v (fst e)) [fst e]
-      | snd e == (V.length v - 1) = lst ++ [fst e]
-      | otherwise = go (bSearch v (fst e)) (lst ++ [fst e])
-
-judge :: [BS.ByteString] -> String
-judge g
-  | null g = "Yes"
-  | length g == 1 = if isPrefixOfA (head g) || isPrefixOfB (head g) || isPrefixOfC (head g) then "Yes" else "No"
-  | length g == 2 = if isPrefixOfA (head g) && isPrefixOfB (g !! 1) || isPrefixOfB (head g) && isPrefixOfC (g !! 1) || isPrefixOfA (head g) && isPrefixOfC (g !! 1) then "Yes" else "No"
-  | length g == 3 = if isPrefixOfA (head g) && isPrefixOfB (g !! 1) && isPrefixOfC (g !! 2) then "Yes" else "No"
-  | otherwise = "No"
-  where
-    isPrefixOfA = BS.isPrefixOf (BS.pack "A")
-    isPrefixOfB = BS.isPrefixOf (BS.pack "B")
-    isPrefixOfC = BS.isPrefixOf (BS.pack "C")
-
 {- Library -}
+
+{- input IO -}
+readWords :: IO [String]
+readWords = words <$> getLine
+
 readInt :: IO Int
 readInt = readLn
 
-readInputInts :: IO [Int]
-readInputInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
+getInts :: IO [Int]
+getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
 readPairInt :: IO (Int, Int)
 readPairInt = (\[a, b] -> (a, b)) . parseLineIntList <$> BC.getLine
+
+parseLineIntList :: BC.ByteString -> [Int]
+parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
 
 readIntPairIntLineV :: Int -> IO (V.Vector (Int, Int))
 readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
 
 readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
 readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
-
-parseLineIntList :: BC.ByteString -> [Int]
-parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
 
 readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
@@ -97,6 +72,7 @@ trisect (l, r) f
     m1 = (l * 2 + r) `div` 3
     m2 = (l + r * 2) `div` 3
 
+-- Array binarySearch
 binarySearch :: (Ord t2, IArray a t2, Ix t1, Integral t1) => a t1 t2 -> t2 -> t1 -> t1 -> t1
 binarySearch arr val low high
   | high < low = low
@@ -105,6 +81,34 @@ binarySearch arr val low high
        in if arr ! mid <= val
             then binarySearch arr val (mid + 1) high
             else binarySearch arr val low (mid - 1)
+
+-- binarySearchIdx
+binarySearchIdx :: (Num a, Ord a) => V.Vector a -> a -> Int -> Int -> Maybe Int
+binarySearchIdx arr val low high
+  | high < low = Just mid
+  | otherwise = case midVal of
+      Nothing -> Nothing
+      Just v
+        | v == val -> Just mid
+        | v < val -> binarySearchIdx arr val (mid + 1) high
+        | otherwise -> binarySearchIdx arr val low (mid - 1)
+  where
+    mid = low + (high - low) `div` 2
+    midVal = arr V.!? mid
+
+-- binarySearchVal
+binarySearchVal :: (Num a, Ord a) => V.Vector a -> a -> Int -> Int -> Maybe a
+binarySearchVal arr val low high
+  | high < low = midVal
+  | otherwise = case midVal of
+      Nothing -> Nothing
+      Just v
+        | v == val -> Just val
+        | v < val -> binarySearchVal arr val (mid + 1) high
+        | otherwise -> binarySearchVal arr val low (mid - 1)
+  where
+    mid = low + (high - low) `div` 2
+    midVal = arr V.!? mid
 
 isPrime :: Int -> Bool
 isPrime x = all (\n -> x `mod` n /= 0) lst
@@ -201,6 +205,121 @@ swapList i j xs
           (ws, y : vs) = splitAt (j - i - 1) zs
        in ys ++ [y] ++ ws ++ [x] ++ vs
 
+swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
+swapArray as i j = do
+  !a <- readArray as i
+  !b <- readArray as j
+  writeArray as j a
+  writeArray as i b
+
+safeGetElement :: [a] -> Int -> Maybe a
+safeGetElement [] _ = Nothing
+safeGetElement (x : xs) 0 = Just x
+safeGetElement (x : xs) n
+  | n < 0 = Nothing
+  | otherwise = safeGetElement xs (n - 1)
+
+dfs :: G.Graph -> IS.IntSet -> Int -> IS.IntSet
+dfs g seen v
+  | IS.member v seen = seen
+  | otherwise = L.foldl' (dfs g) seen' nextVs
+  where
+    nextVs = g IA.! v
+    seen' = IS.insert v seen
+
+modifyArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
+modifyArray arr idx f = do
+  v <- readArray arr idx
+  writeArray arr idx $ f
+
+ceilDiv :: Double -> Double -> Int
+ceilDiv a b = ceiling $ a / b
+
+-- grid
+
+printMatrix :: UArray (Int, Int) Int -> IO ()
+printMatrix arr = do
+  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
+  let rows = [[arr ! (row, col) | col <- [minCol .. maxCol - 1]] | row <- [minRow .. maxRow - 1]]
+  putStr $ unlines [unwords (map show row) | row <- rows]
+
+twoDimensionalSum :: UArray (Int, Int) Int -> UArray (Int, Int) Int
+twoDimensionalSum arr =
+  listArray bounds_ $
+    concat $
+      scanl1 (zipWith (+)) $
+        map (scanl1 (+)) lists
+  where
+    bounds_ = bounds arr
+    lists = LS.chunksOf ((snd . snd) bounds_) $ elems arr
+
+findIndexFrom :: Int -> (a -> Bool) -> [a] -> Maybe Int
+findIndexFrom i f s =
+  case findIndex f (drop i s) of
+    Just j -> Just (i + j)
+    Nothing -> Nothing
+
+elemIndexFrom :: (Eq a) => Int -> a -> [a] -> Maybe Int
+elemIndexFrom i x = findIndexFrom i (== x)
+
+
+-- IntMod
+
+modulus :: Int
+modulus = 998244353
+
+addMod :: Int -> Int -> Int
+addMod x y = (x + y) `mod` modulus
+{-# INLINE addMod #-}
+
+subMod :: Int -> Int -> Int
+subMod x y = (x - y) `mod` modulus
+{-# INLINE subMod #-}
+
+mulMod :: Int -> Int -> Int
+mulMod x y = (x * y) `mod` modulus
+{-# INLINE mulMod #-}
+
+sumMod :: [Int] -> Int
+sumMod = foldl' addMod 0
+{-# INLINE sumMod #-}
+
+productMod :: [Int] -> Int
+productMod = foldl' mulMod 1
+{-# INLINE productMod #-}
+
+newtype IntMod = IntMod Int deriving (Eq, Show, Read)
+
+instance Num IntMod where
+  IntMod x + IntMod y = IntMod (addMod x y)
+  IntMod x - IntMod y = IntMod (subMod x y)
+  IntMod x * IntMod y = IntMod (mulMod x y)
+  fromInteger n = IntMod (fromInteger (n `mod` fromIntegral @Int modulus))
+  abs = undefined
+  signum = undefined
+
+toIntMod :: Int -> IntMod
+toIntMod a = IntMod (a `mod` modulus)
+
+exEuclid :: Int -> Int -> (Int, Int, Int)
+exEuclid = fn 1 0 0 1
+  where
+    fn s t s' t' a b
+      | b == 0 = (a, s, t)
+      | otherwise =
+          let (q, r) = a `divMod` b
+           in fn s' t' (s - q * s') (t - q * t') b r
+
+invMod :: Int -> Int
+invMod a = case exEuclid a modulus of
+  (1, s, _) -> s `mod` modulus
+  (-1, s, _) -> (-s) `mod` modulus
+  _anyOfFailure -> error $ show a ++ " has no inverse modulo" ++ show @Int modulus
+
+invIntMod :: IntMod -> IntMod
+invIntMod (IntMod a) = IntMod (invMod a)
+
+-- array
 swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
 swapArray as i j = do
   !a <- readArray as i
