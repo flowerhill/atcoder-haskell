@@ -60,6 +60,16 @@ withInTime start time
   where
     end = (start + 9) `mod` 24
 
+{-- debug --}
+dbg :: (Show a) => a -> ()
+dbg = case getDebugEnv of
+  Just _ -> (`traceShow` ())
+  Nothing -> const ()
+
+getDebugEnv :: Maybe String
+getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
+{-# NOINLINE getDebugEnv #-}
+
 readGrid :: Int -> IO (V.Vector (V.Vector Char))
 readGrid n = V.fromList <$> replicateM n (V.fromList <$> getLine)
 
@@ -71,44 +81,6 @@ trisect (l, r) f
   where
     m1 = (l * 2 + r) `div` 3
     m2 = (l + r * 2) `div` 3
-
--- Array binarySearch
-binarySearch :: (Ord t2, IArray a t2, Ix t1, Integral t1) => a t1 t2 -> t2 -> t1 -> t1 -> t1
-binarySearch arr val low high
-  | high < low = low
-  | otherwise =
-      let mid = low + (high - low) `div` 2
-       in if arr ! mid <= val
-            then binarySearch arr val (mid + 1) high
-            else binarySearch arr val low (mid - 1)
-
--- binarySearchIdx
-binarySearchIdx :: (Num a, Ord a) => V.Vector a -> a -> Int -> Int -> Maybe Int
-binarySearchIdx arr val low high
-  | high < low = Just mid
-  | otherwise = case midVal of
-      Nothing -> Nothing
-      Just v
-        | v == val -> Just mid
-        | v < val -> binarySearchIdx arr val (mid + 1) high
-        | otherwise -> binarySearchIdx arr val low (mid - 1)
-  where
-    mid = low + (high - low) `div` 2
-    midVal = arr V.!? mid
-
--- binarySearchVal
-binarySearchVal :: (Num a, Ord a) => V.Vector a -> a -> Int -> Int -> Maybe a
-binarySearchVal arr val low high
-  | high < low = midVal
-  | otherwise = case midVal of
-      Nothing -> Nothing
-      Just v
-        | v == val -> Just val
-        | v < val -> binarySearchVal arr val (mid + 1) high
-        | otherwise -> binarySearchVal arr val low (mid - 1)
-  where
-    mid = low + (high - low) `div` 2
-    midVal = arr V.!? mid
 
 isPrime :: Int -> Bool
 isPrime x = all (\n -> x `mod` n /= 0) lst
@@ -326,3 +298,94 @@ swapArray as i j = do
   !b <- readArray as j
   writeArray as j a
   writeArray as i b
+
+{-- bisect --}
+
+-- | 左が false / 右が true で境界を引く
+bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
+bisect (ng, ok) f
+  | abs (ok - ng) == 1 = (ng, ok)
+  | f m = bisect (ng, m) f
+  | otherwise = bisect (m, ok) f
+  where
+    m = (ok + ng) `div` 2
+
+-- | 左が true / 右が false で境界を引く
+bisect2 :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
+bisect2 (ok, ng) f
+  | abs (ng - ok) == 1 = (ok, ng)
+  | f m = bisect2 (m, ng) f
+  | otherwise = bisect2 (ok, m) f
+  where
+    m = (ok + ng) `div` 2
+
+bisectM :: (Monad m, Integral a) => (a, a) -> (a -> m Bool) -> m (a, a)
+bisectM (ng, ok) f
+  | abs (ok - ng) == 1 = return (ng, ok)
+  | otherwise = do
+      x <- f mid
+      if x
+        then bisectM (ng, mid) f
+        else bisectM (mid, ok) f
+  where
+    mid = (ok + ng) `div` 2
+
+lookupGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupGE x xs = do
+  let (_, ub) = bounds xs
+      ok = boundGE x xs
+
+  if ok == succ ub
+    then Nothing
+    else Just (xs ! ok)
+
+lookupGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupGT x xs = do
+  let (_, ub) = bounds xs
+      i = boundGT x xs
+
+  if i == succ ub
+    then Nothing
+    else Just (xs ! i)
+
+lookupLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupLT x xs = do
+  let (lb, _) = bounds xs
+      i = boundLT x xs
+
+  if i == pred lb
+    then Nothing
+    else Just (xs ! i)
+
+lookupLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupLE x xs = do
+  let (lb, _) = bounds xs
+      i = boundLE x xs
+
+  if i == pred lb
+    then Nothing
+    else Just (xs ! i)
+
+boundGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundGE x xs = do
+  let (lb, ub) = bounds xs
+      (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
+  ok
+
+boundGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundGT x xs = do
+  let (lb, ub) = bounds xs
+      (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
+  ok
+
+boundLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundLT x xs = do
+  let (lb, ub) = bounds xs
+      (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
+  ng
+
+boundLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundLE x xs = do
+  let (lb, ub) = bounds xs
+      (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
+  ng
