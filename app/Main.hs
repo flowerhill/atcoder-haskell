@@ -29,23 +29,32 @@ import System.Environment
 
 main :: IO ()
 main = do
-  [[x1, y1], [x2, y2], [x3, y3]] <- replicateM 3 getFloats
+  n <- readLn @Int
+  lrs <- replicateM n getInts
 
-  let x = (x2 - x1) ** 2
+  let res = solve lrs [] 0
+  print res
 
-  let len1 = (x2 - x1) ^ 2 + (y2 - y1) ^ 2
-  let len2 = (x3 - x1) ^ 2 + (y3 - y1) ^ 2
-  let len3 = (x3 - x2) ^ 2 + (y3 - y2) ^ 2
-
-  let m = L.maximum [len1, len2, len3]
-  let others = L.filter (/= m) [len1, len2, len3]
-
-  putStrLn if m == L.sum others then "Yes" else "No"
+  if snd res == 0
+    then do
+      putStrLn "Yes"
+      putStrLn $ unwords . map show $ L.reverse $ fst res
+    else putStrLn "No"
 
 {-- lib --}
+solve [] res sum = (res, sum)
+solve ([l, r] : tail) res sum
+  | l <= -sum && -sum <= r = solve tail (-sum : res) 0
+  | -sum <= l = solve tail (l : res) (sum + l)
+  | -sum >= r = solve tail (r : res) (sum + r)
 
-getFloats :: IO [Float]
-getFloats = map read . words . BC.unpack <$> BC.getLine
+getInts :: IO [Int]
+getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
+
+minAbsValue :: (Num a, Ord a) => a -> a -> a
+minAbsValue x y
+  | abs x <= abs y = x
+  | otherwise = y
 
 {-- debug --}
 dbg :: (Show a) => a -> ()
