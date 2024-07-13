@@ -9,9 +9,9 @@
 
 module Main where
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, replicateM, when)
 import Data.Array (Array)
-import Data.Array.Base (UArray (UArray), readArray)
+import Data.Array.Base (UArray (UArray), getElems, readArray)
 import Data.Array.IArray
 import Data.Array.IO (IOUArray, MArray (newArray), readArray, writeArray)
 import Data.Array.Unboxed (UArray)
@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.Char as C
 import Data.Ix
 import qualified Data.List as L
+import Data.Ord (comparing)
 import qualified Data.Vector as V
 import Debug.Trace
 import GHC.IO
@@ -28,27 +29,23 @@ import System.Environment
 
 main :: IO ()
 main = do
-  [n, s] <- getInts
-  as <- getInts
+  [[x1, y1], [x2, y2], [x3, y3]] <- replicateM 3 getFloats
 
-  dp <- newArray ((0, 0), (n, s)) False :: IO (IOUArray (Int, Int) Bool)
+  let x = (x2 - x1) ** 2
 
-  writeArray dp (0, 0) True
+  let len1 = (x2 - x1) ^ 2 + (y2 - y1) ^ 2
+  let len2 = (x3 - x1) ^ 2 + (y3 - y1) ^ 2
+  let len3 = (x3 - x2) ^ 2 + (y3 - y2) ^ 2
 
-  forM_ [1 .. n] \i -> do
-    forM_ [0 .. s] \j -> do
-      v <- readArray dp (i - 1, j)
-      let a = as L.!! (i - 1)
-      when (j < a && v) $ writeArray dp (i, j) True
-      when (j >= a) $ do
-        v2 <- readArray dp (i - 1, j - a)
-        when (v2 || v) $ writeArray dp (i, j) True
+  let m = L.maximum [len1, len2, len3]
+  let others = L.filter (/= m) [len1, len2, len3]
 
-  result <- readArray dp (n, s)
-  putStrLn $ if result then "Yes" else "No"
+  putStrLn if m == L.sum others then "Yes" else "No"
 
-getInts :: IO [Int]
-getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
+{-- lib --}
+
+getFloats :: IO [Float]
+getFloats = map read . words . BC.unpack <$> BC.getLine
 
 {-- debug --}
 dbg :: (Show a) => a -> ()

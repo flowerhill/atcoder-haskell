@@ -30,6 +30,8 @@ import Debug.Trace (traceShow, traceShowId)
 readWords :: IO [String]
 readWords = words <$> getLine
 
+-- Int
+
 readInt :: IO Int
 readInt = readLn
 
@@ -47,6 +49,11 @@ readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
 
 readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
 readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
+
+-- Float
+
+getFloats :: IO [Float]
+getFloats = map read . words . BC.unpack <$> BC.getLine
 
 readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
@@ -206,6 +213,21 @@ modifyArray arr idx f = do
 
 ceilDiv :: Double -> Double -> Int
 ceilDiv a b = ceiling $ a / b
+
+-- IOArray
+
+getRowAsArray :: Int -> Int -> IOUArray (Int, Int) Int -> IO (IOUArray Int Int)
+getRowAsArray n w arr = do
+  -- 新しい一次元配列を作成
+  newArr <- newArray (0, w) minBound :: IO (IOUArray Int Int)
+  -- 元の配列から値を読み取り、新しい配列に書き込む
+  mapM_
+    ( \col -> do
+        val <- readArray arr (n, col)
+        writeArray newArr col val
+    )
+    [0 .. w]
+  return newArr
 
 -- grid
 
