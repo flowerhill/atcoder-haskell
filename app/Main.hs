@@ -1,60 +1,66 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# HLINT ignore "Used otherwise as a pattern" #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# HLINT ignore "Use lambda-case" #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Main where
 
-import Control.Monad (forM_, replicateM, when)
+import Control.Monad
+import Control.Monad.ST
 import Data.Array (Array)
-import Data.Array.Base (UArray (UArray), getElems, readArray)
 import Data.Array.IArray
-import Data.Array.IO (IOUArray, MArray (newArray), readArray, writeArray)
+import Data.Array.IO
+import Data.Array.MArray
+import Data.Array.ST
 import Data.Array.Unboxed (UArray)
-import Data.Bifunctor (Bifunctor (bimap))
-import Data.ByteString.Char8 (readInt)
+import Data.Bool (bool)
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Char as C
 import Data.Ix
-import qualified Data.List as L
-import Data.Ord (comparing)
+import Data.List (groupBy, sort, sortBy, sortOn, unfoldr)
+import Data.List.Extra (breakEnd, lower, upper)
+import Data.Ord (Down (Down), comparing)
 import qualified Data.Vector as V
-import Debug.Trace
-import GHC.IO
-import System.Environment
+import qualified Data.Vector.Generic as VG
+import qualified Data.Vector.Unboxed as VU
+import Debug.Trace (traceShow)
+import GHC.IO (unsafePerformIO)
+import GHC.List (foldl', scanl')
+import System.Environment (lookupEnv)
 
 main :: IO ()
 main = do
   n <- readLn @Int
-  lrs <- replicateM n getInts
+  s <- getLine
+  q <- readLn @Int
+  qs <- replicateM q do
+    [t, x, c] <- words <$> getLine
+    return (read @Int t, (read @Int x, head c))
 
-  let res = solve lrs [] 0
-  print res
+  let f1 qq st = case qq of
+        0 -> st
+        2 -> lower st
+        3 -> upper st
+        _ -> error "Invalid last query"
 
-  if snd res == 0
-    then do
-      putStrLn "Yes"
-      putStrLn $ unwords . map show $ L.reverse $ fst res
-    else putStrLn "No"
+      f2 st bounds query =
+        let arr = listArray @UArray bounds st
+         in elems $ accum (\_ x -> x) arr $ map snd $ filter (\(t, _) -> t == 1) query
+
+      (pre, post) = breakEnd (\(t, _) -> t /= 1) qs
+      lQ = if null pre then 0 else fst (last pre)
+      s' = f1 lQ $ f2 s (1, n) pre
+
+  putStrLn $ f2 s' (1, n) post
 
 {-- lib --}
-solve [] res sum = (res, sum)
-solve ([l, r] : tail) res sum
-  | l <= -sum && -sum <= r = solve tail (-sum : res) 0
-  | -sum <= l = solve tail (l : res) (sum + l)
-  | -sum >= r = solve tail (r : res) (sum + r)
-
 getInts :: IO [Int]
-getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
-
-minAbsValue :: (Num a, Ord a) => a -> a -> a
-minAbsValue x y
-  | abs x <= abs y = x
-  | otherwise = y
+getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
 {-- debug --}
 dbg :: (Show a) => a -> ()

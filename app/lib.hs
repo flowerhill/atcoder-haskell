@@ -4,11 +4,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Main where
-
 import qualified Control.Applicative
 import Control.Monad
-import qualified Control.Monad
 import Control.Monad.ST
 import Control.Monad.State
 import Data.Array.IArray
@@ -25,6 +22,46 @@ import qualified Data.Vector.Unboxed as VU
 import Debug.Trace (traceShow, traceShowId)
 
 {- Library -}
+{-- dijkstra --}
+myDijkstra :: Ix v => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
+myDijkstra nextStates (l, u_) v0s = runSTUArray $ do
+  dist <- newArray (l, u_) maxBound
+
+  forM_ v0s $ \v -> do
+    writeArray dist v 0
+
+  let queue = Heap.fromList $ map (Heap.Entry 0) v0s
+
+  aux (Heap.uncons queue) dist
+  return dist
+  where
+    aux Nothing _ = return ()
+    aux (Just (Heap.Entry dv v, queue)) dist = do
+      garbage <- (dv >) <$> readArray dist v
+
+      if garbage
+        then aux (Heap.uncons queue) dist -- skip
+        else do
+          queue' <-
+            foldM
+              ( \q (u, w) -> do
+                  du <- readArray dist u
+
+                  let dv' = dv + w
+
+                  if dv' < du
+                    then do
+                      writeArray dist u dv'
+                      return $ Heap.insert (Heap.Entry dv' u) q
+                    else return q
+              )
+              queue
+              (nextStates v)
+
+          aux (Heap.uncons queue') dist
+
+graph2 :: (Ix i, Foldable t) => (i, i) -> t (i, i) -> Array i [i]
+graph2 b uvs = accumArray @Array (flip (:)) [] b $ concatMap (\(u, v) -> [(u, v), (v, u)]) uvs
 
 {- input IO -}
 readWords :: IO [String]
@@ -38,8 +75,8 @@ readInt = readLn
 getInts :: IO [Int]
 getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
-readPairInt :: IO (Int, Int)
-readPairInt = (\[a, b] -> (a, b)) . parseLineIntList <$> BC.getLine
+getPairInt :: IO (Int, Int)
+getPairInt = (\[a, b] -> (a, b)) <$> getInts
 
 parseLineIntList :: BC.ByteString -> [Int]
 parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
@@ -55,17 +92,24 @@ readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
 getFloats :: IO [Float]
 getFloats = map read . words . BC.unpack <$> BC.getLine
 
+-- others
+
 readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
   where
     [str, num] = words input
 
-withInTime :: Int -> Int -> Bool
-withInTime start time
+withInTime :: Int -> Int -> Int -> Bool
+withInTime start diff time
+  | start <= end = time >= start && time < end
+  | otherwise = time >= start || time < end
+
+withInTimeDiff :: Int -> Int -> Int -> Bool
+withInTimeDiff start diff time
   | start <= end = time >= start && time < end
   | otherwise = time >= start || time < end
   where
-    end = (start + 9) `mod` 24
+    end = (start + diff) `mod` 24
 
 {-- debug --}
 dbg :: (Show a) => a -> ()
@@ -156,8 +200,18 @@ isCube n = cubeRoot ^ 3 == n
   where
     cubeRoot = round (fromIntegral n ** (1 / 3 :: Double))
 
-isPalindrome :: Int -> Bool
-isPalindrome n =
+-- 回文
+-- String
+isPalindrome :: String -> Bool
+isPalindrome s = s == reverse s
+
+
+containsPalindrome :: Int -> String -> Bool
+containsPalindrome k s = L.or [s' == L.reverse s' | s' <- substringK k s]
+
+-- Int
+isPalindromeInt :: Int -> Bool
+isPalindromeInt n =
   if even numDigits
     then leftHalf == reverse rightHalf
     else leftHalf == reverse (tail rightHalf)
@@ -184,19 +238,17 @@ swapList i j xs
           (ws, y : vs) = splitAt (j - i - 1) zs
        in ys ++ [y] ++ ws ++ [x] ++ vs
 
-swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
-swapArray as i j = do
-  !a <- readArray as i
-  !b <- readArray as j
-  writeArray as j a
-  writeArray as i b
+-- リストのコンビネーション
+combinationList :: [[a]] -> [[a]]
+combinationList [] = [[]]
+combinationList (xs : xss) = [x : ys | x <- xs, ys <- combinationList xss]
 
-safeGetElement :: [a] -> Int -> Maybe a
-safeGetElement [] _ = Nothing
-safeGetElement (x : xs) 0 = Just x
-safeGetElement (x : xs) n
-  | n < 0 = Nothing
-  | otherwise = safeGetElement xs (n - 1)
+-- 数字のパターンを重複を許して出す
+combinationsWithRepetition :: Int -> Int -> Int -> [[Int]]
+combinationsWithRepetition l r = go
+  where
+    go 0 = [[]]
+    go k = [x : xs | x <- [l .. r], xs <- go (k - 1), x <= head (x : xs) || null xs]
 
 dfs :: G.Graph -> IS.IntSet -> Int -> IS.IntSet
 dfs g seen v
@@ -214,7 +266,29 @@ modifyArray arr idx f = do
 ceilDiv :: Double -> Double -> Int
 ceilDiv a b = ceiling $ a / b
 
--- IOArray
+{-- MArray --}
+
+modifyArray :: (MArray a e m, Ix i) => a i e -> i -> (e -> e) -> m ()
+modifyArray ary ix f = do
+  v <- readArray ary ix
+  writeArray ary ix $! f v
+{-# INLINE modifyArray #-}
+
+swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
+swapArray as i j = do
+  a <- readArray as i
+  b <- readArray as j
+  writeArray as j $! a
+  writeArray as i $! b
+{-# INLINE swapArray #-}
+
+updateArray :: (MArray a e m, Ix i) => (e -> e' -> e) -> a i e -> i -> e' -> m ()
+updateArray f arr ix x = do
+  v <- readArray arr ix
+  writeArray arr ix $! f v x
+{-# INLINE updateArray #-}
+
+{-- IOArray --}
 
 getRowAsArray :: Int -> Int -> IOUArray (Int, Int) Int -> IO (IOUArray Int Int)
 getRowAsArray n w arr = do
@@ -229,7 +303,7 @@ getRowAsArray n w arr = do
     [0 .. w]
   return newArr
 
--- grid
+{-- grid --}
 
 printMatrix :: UArray (Int, Int) Int -> IO ()
 printMatrix arr = do
@@ -321,93 +395,53 @@ swapArray as i j = do
   writeArray as j a
   writeArray as i b
 
-{-- bisect --}
+{-- 文字列操作 --}
 
--- | 左が false / 右が true で境界を引く
-bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect (ng, ok) f
-  | abs (ok - ng) == 1 = (ng, ok)
-  | f m = bisect (ng, m) f
-  | otherwise = bisect (m, ok) f
+-- 出現回数
+countSubstring :: String -> String -> Int
+countSubstring sub str = length $ filter (isPrefixOf sub) $ tails str
+
+-- 出現場所
+findSubstringIndices :: String -> String -> [Int]
+findSubstringIndices sub str = [i | (i, s) <- zip [0 ..] (tails str), sub `isPrefixOf` s]
+
+substring :: Int -> Int -> String -> String
+substring start len str = take len (drop start str)
+
+substringK :: Int -> String -> [String]
+substringK k s = [substring i k s | i <- [0 .. length s - k]]
+
+-- 文字列を1文字変更する関数
+changeChar :: String -> String -> Int -> String
+changeChar s t i = take i s ++ [t !! i] ++ drop (i + 1) s
+
+-- list走査
+
+sublists :: [a] -> [[a]]
+sublists = filter (not . null) . concatMap inits . tails
+
+-- その他
+-- distinct_permutation の Haskell 実装
+distinctPermutations :: (Ord a) => [a] -> [[a]]
+distinctPermutations vs = permute (length vs) (L.sort vs)
   where
-    m = (ok + ng) `div` 2
+    permute 0 _ = [[]]
+    permute _ [] = []
+    permute n xs = [x : ys | (x, xs') <- select xs, ys <- permute (n - 1) xs']
 
--- | 左が true / 右が false で境界を引く
-bisect2 :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect2 (ok, ng) f
-  | abs (ng - ok) == 1 = (ok, ng)
-  | f m = bisect2 (m, ng) f
-  | otherwise = bisect2 (ok, m) f
-  where
-    m = (ok + ng) `div` 2
+    select :: (Ord a) => [a] -> [(a, [a])]
+    select [] = []
+    select (x : xs) = (x, xs) : [(y, x : ys) | (y, ys) <- select xs, y /= x]
 
-bisectM :: (Monad m, Integral a) => (a, a) -> (a -> m Bool) -> m (a, a)
-bisectM (ng, ok) f
-  | abs (ok - ng) == 1 = return (ng, ok)
-  | otherwise = do
-      x <- f mid
-      if x
-        then bisectM (ng, mid) f
-        else bisectM (mid, ok) f
-  where
-    mid = (ok + ng) `div` 2
 
-lookupGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupGE x xs = do
-  let (_, ub) = bounds xs
-      ok = boundGE x xs
+{--  リスト走査 --}
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x : _) = Just x
 
-  if ok == succ ub
-    then Nothing
-    else Just (xs ! ok)
-
-lookupGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupGT x xs = do
-  let (_, ub) = bounds xs
-      i = boundGT x xs
-
-  if i == succ ub
-    then Nothing
-    else Just (xs ! i)
-
-lookupLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupLT x xs = do
-  let (lb, _) = bounds xs
-      i = boundLT x xs
-
-  if i == pred lb
-    then Nothing
-    else Just (xs ! i)
-
-lookupLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupLE x xs = do
-  let (lb, _) = bounds xs
-      i = boundLE x xs
-
-  if i == pred lb
-    then Nothing
-    else Just (xs ! i)
-
-boundGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundGE x xs = do
-  let (lb, ub) = bounds xs
-      (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
-  ok
-
-boundGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundGT x xs = do
-  let (lb, ub) = bounds xs
-      (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
-  ok
-
-boundLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundLT x xs = do
-  let (lb, ub) = bounds xs
-      (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
-  ng
-
-boundLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundLE x xs = do
-  let (lb, ub) = bounds xs
-      (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
-  ng
+safeGetElement :: [a] -> Int -> Maybe a
+safeGetElement [] _ = Nothing
+safeGetElement (x : xs) 0 = Just x
+safeGetElement (x : xs) n
+  | n < 0 = Nothing
+  | otherwise = safeGetElement xs (n - 1)
