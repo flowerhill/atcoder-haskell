@@ -445,3 +445,24 @@ safeGetElement (x : xs) 0 = Just x
 safeGetElement (x : xs) n
   | n < 0 = Nothing
   | otherwise = safeGetElement xs (n - 1)
+
+{-- リスト変更 --}
+-- インデックスと新しい値を指定して、リストの要素を更新する
+updateAt :: Int -> a -> [a] -> [a]
+updateAt _ _ [] = [] -- 空リストの場合
+updateAt n newVal (x : xs)
+  | n < 0 = x : xs -- 負のインデックスの場合は元のリストを返す
+  | n == 0 = newVal : xs -- 更新位置の場合
+  | otherwise = x : updateAt (n - 1) newVal xs -- 再帰的に次の要素を処理
+
+-- 条件に基づいて要素を更新する
+updateWhere :: (a -> Bool) -> a -> [a] -> [a]
+updateWhere pred newVal [] = []
+updateWhere pred newVal (x : xs)
+  | pred x = newVal : updateWhere pred newVal xs -- 条件に合致する場合は更新
+  | otherwise = x : updateWhere pred newVal xs -- それ以外の場合は元の値を保持
+
+-- 複数の要素を一度に更新する
+updateMultiple :: [(Int, a)] -> [a] -> [a]
+updateMultiple [] xs = xs
+updateMultiple ((i, v) : updates) xs = updateMultiple updates (updateAt i v xs)

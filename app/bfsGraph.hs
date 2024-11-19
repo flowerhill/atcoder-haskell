@@ -15,16 +15,16 @@ buildG bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v] -> [(u, v), (v, u)]) edges
 
--- STArray版 速い
 -- BFSを実行し、始点からの距離をUArrayで返す
-bfs :: Graph -> Bounds -> Int -> UArray Int Int
-bfs graph (l, h) start = runSTUArray $ do
-  -- 距離配列を-1で初期化
-  dist <- newArray (l, h) (-1) :: ST s (STUArray s Int Int)
+bfs :: (Ix i, Foldable t) => (i -> t i) -> Int -> (i, i) -> [i] -> UArray i Int
+bfs nextStates init (l, h) starts = runSTUArray $ do
+  -- 距離配列を初期化
+  dist <- newArray (l, h) init
   -- 探索キュー
-  queue <- newSTRef (Seq.singleton start)
+  queue <- newSTRef (Seq.fromList starts)
   -- 始点の距離を0に設定
-  writeArray dist start 0
+  forM_ starts $ \start ->
+    writeArray dist start 0
 
   -- メインのBFSループ
   fix $ \loop -> do
@@ -38,9 +38,9 @@ bfs graph (l, h) start = runSTUArray $ do
         -- 現在の頂点の距離を取得
         currentDist <- readArray dist v
         -- 隣接頂点を処理
-        forM_ (graph ! v) $ \u -> do
+        forM_ (nextStates v) $ \u -> do
           uDist <- readArray dist u
-          when (uDist == -1) $ do
+          when (uDist == init) $ do
             writeArray dist u (currentDist + 1)
             modifySTRef' queue (Seq.>< Seq.singleton u)
         loop

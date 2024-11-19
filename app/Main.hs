@@ -6,6 +6,7 @@
 {-# HLINT ignore "Used otherwise as a pattern" #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Main where
@@ -25,8 +26,8 @@ import Data.Function (fix)
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
 import Data.Ix
-import Data.List (groupBy, sort, sortBy, sortOn, unfoldr)
-import Data.List.Extra (breakEnd, lower, upper)
+import Data.List (foldl', group, groupBy, sort, sortBy, sortOn, unfoldr)
+import Data.List.Extra (breakEnd, lower, splitOn, upper)
 import Data.Maybe (fromMaybe)
 import Data.Ord (Down (Down), comparing)
 import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
@@ -37,44 +38,57 @@ import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Unboxed as VU
 import Debug.Trace (traceShow)
 import GHC.IO (unsafePerformIO)
-import GHC.List (foldl', scanl')
 import System.Environment (lookupEnv)
 
 main :: IO ()
 main = do
-  [n1, n2, m] <- getInts
-  abs <- replicateM m getInts
+  [h, w] <- getInts
+  ss <- concat <$> replicateM h getLine
 
-  let n = n1 + n2
-      g = buildG (1, n) abs
-      d1 = maximum . elems $ bfs g (1, n) 1
-      d2 = maximum . elems $ bfs g (1, n) n
+  let grid = listArray @UArray ((1, 1), (h, w)) ss
+      dist = bfs (\v -> filter (judge grid v) $ move v) (-1) ((1, 1), (h, w)) [(1, 1)]
 
-  print $ d1 + d2 + 1
+      res = dist ! (h, w)
+
+  putStrLn $ if res == -1 then "No" else "Yes"
+
+move :: (Num a, Num b) => (a, b) -> [(a, b)]
+move pos = map (move pos) [(1, 0), (0, 1), (-1, 0), (0, -1)]
+  where
+    move (x, y) (x', y') = (x + x', y + y')
+
+judge :: Ix i => UArray i Char -> i -> i -> Bool
+judge grid x x'
+  | (not . inRange (bounds grid)) x' = False
+  | otherwise = case (grid ! x, grid ! x') of
+      ('s', 'n') -> True
+      ('n', 'u') -> True
+      ('u', 'k') -> True
+      ('k', 'e') -> True
+      ('e', 's') -> True
+      _ -> False
 
 {-- lib --}
 getInts :: IO [Int]
 getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
+-- 幅優先探索（グラフ用）
 type Graph = Array Int [Int]
+
+type Edge = (Int, Int)
 
 type Bounds = (Int, Int)
 
--- グラフ構築
-buildG :: Bounds -> [[Int]] -> Graph
-buildG bounds edges = accumArray (flip (:)) [] bounds edges'
-  where
-    edges' = concatMap (\[u, v] -> [(u, v), (v, u)]) edges
-
 -- BFSを実行し、始点からの距離をUArrayで返す
-bfs :: Graph -> Bounds -> Int -> UArray Int Int
-bfs graph (l, h) start = runSTUArray $ do
-  -- 距離配列を-1で初期化
-  dist <- newArray (l, h) (-1) :: ST s (STUArray s Int Int)
+bfs :: (Ix i, Foldable t) => (i -> t i) -> Int -> (i, i) -> [i] -> UArray i Int
+bfs nextStates init (l, h) starts = runSTUArray $ do
+  -- 距離配列を初期化
+  dist <- newArray (l, h) init
   -- 探索キュー
-  queue <- newSTRef (Seq.singleton start)
+  queue <- newSTRef (Seq.fromList starts)
   -- 始点の距離を0に設定
-  writeArray dist start 0
+  forM_ starts $ \start ->
+    writeArray dist start 0
 
   -- メインのBFSループ
   fix $ \loop -> do
@@ -88,9 +102,9 @@ bfs graph (l, h) start = runSTUArray $ do
         -- 現在の頂点の距離を取得
         currentDist <- readArray dist v
         -- 隣接頂点を処理
-        forM_ (graph ! v) $ \u -> do
+        forM_ (nextStates v) $ \u -> do
           uDist <- readArray dist u
-          when (uDist == -1) $ do
+          when (uDist == init) $ do
             writeArray dist u (currentDist + 1)
             modifySTRef' queue (Seq.>< Seq.singleton u)
         loop
