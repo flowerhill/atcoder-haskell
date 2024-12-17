@@ -163,14 +163,13 @@ lookupLE arr val = ub
 -- 逆方向にぶたん
 lookupGTR arr val = ub
   where
-    ub = case search binary (\x -> arr ! x > val) ok ng of
+    ub = case search binary (\x -> arr IA.! x > val) ok ng of
       Just index -> index
       _ -> ok
-    (ng, ok) = bounds arr
+    (ng, ok) = IA.bounds arr
 
 lookupGER arr val = lb
   where
-    lb = case search binary (\x -> arr ! x >= val) ok ng of
+    lb = case search binary (\x -> arr IA.! x >= val) ok ng of
       Just index -> index
       _ -> ok
-    (ng, ok) = bounds arr

@@ -46,3 +46,15 @@ bfs nextStates init (l, h) starts = runSTUArray $ do
         loop
 
   return dist
+
+-- immutable版
+bfs :: Int -> Graph -> Seq.Seq (Int, Int) -> M.Map Int Int -> M.Map Int Int
+bfs n g queue visited
+  | null queue = visited
+bfs n g ((q, l) Seq.:<| queue) visited
+  | M.member q visited = bfs n g queue visited
+  | otherwise =
+      let visited' = M.insert q l visited
+          next = g A.! q
+          queue' = queue Seq.>< Seq.fromList (L.map (,succ l) next)
+       in bfs n g queue' visited'

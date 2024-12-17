@@ -152,25 +152,6 @@ printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elem
     ((_, w1), (_, w2)) = bounds grid
     w = w2 + 1 - w1
 
-bfs :: Int -> Graph -> Seq.Seq (Int, Int) -> M.Map Int Int -> M.Map Int Int
-bfs n g queue visited
-  | null queue = visited
-bfs n g ((q, l) Seq.:<| queue) visited
-  | M.member q visited = bfs n g queue visited
-  | otherwise =
-      let visited' = M.insert q l visited
-          next = g A.! q
-          queue' = queue Seq.>< Seq.fromList (L.map (,succ l) next)
-       in bfs n g queue' visited'
-
-dfs :: Graph -> IS.IntSet -> Int -> IS.IntSet
-dfs g seen v
-  | IS.member v seen = seen
-  | otherwise = L.foldl' (dfs g) seen' next_vs
-  where
-    next_vs = g IA.! v
-    seen' = IS.insert v seen
-
 move :: Char -> (Int, Int) -> (Int, Int)
 move 'L' (i, j) = (i, j - 1)
 move 'R' (i, j) = (i, j + 1)
@@ -249,6 +230,27 @@ combinationsWithRepetition l r = go
   where
     go 0 = [[]]
     go k = [x : xs | x <- [l .. r], xs <- go (k - 1), x <= head (x : xs) || null xs]
+
+-- 指定した数だけ抽出して組み合わせる
+combinations :: Int -> [a] -> [[a]]
+combinations _ [] = []
+combinations n as@(_ : xs)
+  | n == 0 = [[]]
+  | n == 1 = map pure as
+  | n == l = pure as
+  | n > l = []
+  | otherwise = run (l - 1) (n - 1) as $ combinations (n - 1) xs
+  where
+    l = length as
+
+    run :: Int -> Int -> [a] -> [[a]] -> [[a]]
+    run m k ys cs
+      | m == k = map (ys ++) cs
+      | otherwise = case take (m - k + 1) ys of
+          (q : qs) -> do
+            let dc = product [(m - k + 1) .. (m - 1)] `div` product [1 .. (k - 1)]
+            map (q :) cs ++ run (m - 1) k qs (drop dc cs)
+          [] -> error "Invalid Case"
 
 dfs :: G.Graph -> IS.IntSet -> Int -> IS.IntSet
 dfs g seen v
@@ -395,6 +397,16 @@ swapArray as i j = do
   writeArray as j a
   writeArray as i b
 
+findArrayIndices :: (IArray a e, Ix i) => (e -> Bool) -> a i e -> [i]
+findArrayIndices predicate as = [i | (i, e) <- assocs as, predicate e]
+
+(!?) :: (IArray a e, Ix i) => a i e -> i -> Maybe e
+(!?) arr i =
+  let b = bounds arr
+   in if inRange b i
+        then Just (arr ! i)
+        else Nothing
+
 {-- 文字列操作 --}
 
 -- 出現回数
@@ -414,11 +426,6 @@ substringK k s = [substring i k s | i <- [0 .. length s - k]]
 -- 文字列を1文字変更する関数
 changeChar :: String -> String -> Int -> String
 changeChar s t i = take i s ++ [t !! i] ++ drop (i + 1) s
-
--- list走査
-
-sublists :: [a] -> [[a]]
-sublists = filter (not . null) . concatMap inits . tails
 
 -- その他
 -- distinct_permutation の Haskell 実装
@@ -446,6 +453,32 @@ safeGetElement (x : xs) n
   | n < 0 = Nothing
   | otherwise = safeGetElement xs (n - 1)
 
+-- 部分リストを抽出
+sublists :: [a] -> [[a]]
+sublists = filter (not . null) . concatMap inits . tails
+
+-- 斜め方向に走査
+diag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
+diag arr =
+  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
+      coords =
+        [ [ (i, j) | i <- [minRow .. maxRow], j <- [minCol .. maxCol], i - j == sum
+          ]
+          | sum <- [minRow - maxCol .. maxRow - minCol]
+        ]
+   in [[arr ! c | c <- cc] | cc <- coords]
+
+-- 逆斜め方向に走査
+revDiag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
+revDiag arr =
+  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
+      coords =
+        [ [ (i, j) | i <- [minRow .. maxRow], j <- [maxCol, maxCol - 1 .. minCol], i + j == sum
+          ]
+          | sum <- [minRow + minCol .. maxRow + maxCol]
+        ]
+   in [[arr ! c | c <- cc] | cc <- coords]
+
 {-- リスト変更 --}
 -- インデックスと新しい値を指定して、リストの要素を更新する
 updateAt :: Int -> a -> [a] -> [a]
@@ -466,3 +499,7 @@ updateWhere pred newVal (x : xs)
 updateMultiple :: [(Int, a)] -> [a] -> [a]
 updateMultiple [] xs = xs
 updateMultiple ((i, v) : updates) xs = updateMultiple updates (updateAt i v xs)
+
+-- マンハッタン距離 ∣x1−x2∣ + ∣y1−y2∣ を求める
+manhattanDistance :: Num a => (a, a) -> (a, a) -> a
+manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
