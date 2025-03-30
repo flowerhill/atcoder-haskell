@@ -6,6 +6,7 @@ import qualified Data.Char as C
 import Data.Foldable (forM_)
 import Data.List
 
+{-- IOUArray版 --}
 -- UnionFind 各ノードの親ノード 各ノードが属する木のsize
 -- ノード番号をuniqなintとして持っておく
 -- arrayを使って、各ノードに対応する親ノード、sizeが取得できるようにする
@@ -48,11 +49,11 @@ unit uf@(UnionFind parent size) x y = do
         writeArray parent x' y'
         writeArray size y' (sizeX + sizeY)
 
-isSame :: UnionFind -> Int -> Int -> IO Bool
+sameUF :: UnionFind -> Int -> Int -> IO Bool
 -- (<*>) :: Applicative f => f (a -> b) -> f a -> f b を適用
 -- IO (Int -> Bool) -> IO Int -> IO Bool となる
 -- IO (== (root uf x)) <*> IO (root uf y) という形になる
-isSame uf x y = (==) <$> getRoot uf x <*> getRoot uf y
+sameUF uf x y = (==) <$> getRoot uf x <*> getRoot uf y
 
 getSize :: UnionFind -> Int -> IO Int
 getSize uf@(UnionFind _ size) u = do

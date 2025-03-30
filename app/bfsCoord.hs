@@ -18,3 +18,28 @@ bfsCoord coord d f = inner 0 S.empty
                 inRange bnds dij,
                 f coord dij
             ]
+
+-- startからgoalにいくやつ
+type Point = (Int, Int)
+
+type Grid = UArray (Int, Int) Char
+
+bfs :: Grid -> Point -> Point -> Bool -> Maybe Int
+bfs grid start goal isVertical = bfs' (Seq.singleton (start, 0, isVertical)) (S.singleton start)
+  where
+    boundsGrid = bounds grid
+    valid point visited = inRange boundsGrid point && grid ! point /= '#' && point `S.notMember` visited
+
+    bfs' :: Seq.Seq (Point, Int, Bool) -> S.Set Point -> Maybe Int
+    bfs' q visited =
+      case Seq.viewl q of
+        Seq.EmptyL -> Nothing
+        (pos@(r, c), dist, isVertical) Seq.:< rest ->
+          if pos == goal
+            then Just dist
+            else
+              let nextDirs = if isVertical then [(-1, 0), (1, 0)] else [(0, -1), (0, 1)]
+                  nextPoints = [(r + dr, c + dc) | (dr, dc) <- nextDirs, let (nr, nc) = (r + dr, c + dc), valid (nr, nc) visited]
+                  newQueue = rest Seq.>< Seq.fromList [(p, dist + 1, not isVertical) | p <- nextPoints]
+                  newVisited = folr S.insert pos visited
+               in bfs' newQueue newVisited

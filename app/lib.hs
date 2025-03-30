@@ -87,12 +87,15 @@ readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
 readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
 readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
 
--- Float
+-- Double
 
-getFloats :: IO [Float]
-getFloats = map read . words . BC.unpack <$> BC.getLine
+getDouble :: IO [Double]
+getDouble = map read . words . BC.unpack <$> BC.getLine
 
 -- others
+
+fromListToTuple :: [Int] -> (Int, Int)
+fromListToTuple [a, b] = (a, b)
 
 readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
@@ -111,15 +114,11 @@ withInTimeDiff start diff time
   where
     end = (start + diff) `mod` 24
 
-{-- debug --}
-dbg :: (Show a) => a -> ()
-dbg = case getDebugEnv of
-  Just _ -> (`traceShow` ())
-  Nothing -> const ()
+printYN :: Bool -> IO ()
+printYN f = putStrLn $ bool "No" "Yes" f
 
-getDebugEnv :: Maybe String
-getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
-{-# NOINLINE getDebugEnv #-}
+printList :: Show a => [a] -> IO ()
+printList lst = putStrLn $ unwords $ map show lst
 
 readGrid :: Int -> IO (V.Vector (V.Vector Char))
 readGrid n = V.fromList <$> replicateM n (V.fromList <$> getLine)
@@ -185,7 +184,6 @@ isCube n = cubeRoot ^ 3 == n
 -- String
 isPalindrome :: String -> Bool
 isPalindrome s = s == reverse s
-
 
 containsPalindrome :: Int -> String -> Bool
 containsPalindrome k s = L.or [s' == L.reverse s' | s' <- substringK k s]
@@ -268,71 +266,6 @@ modifyArray arr idx f = do
 ceilDiv :: Double -> Double -> Int
 ceilDiv a b = ceiling $ a / b
 
-{-- MArray --}
-
-modifyArray :: (MArray a e m, Ix i) => a i e -> i -> (e -> e) -> m ()
-modifyArray ary ix f = do
-  v <- readArray ary ix
-  writeArray ary ix $! f v
-{-# INLINE modifyArray #-}
-
-swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
-swapArray as i j = do
-  a <- readArray as i
-  b <- readArray as j
-  writeArray as j $! a
-  writeArray as i $! b
-{-# INLINE swapArray #-}
-
-updateArray :: (MArray a e m, Ix i) => (e -> e' -> e) -> a i e -> i -> e' -> m ()
-updateArray f arr ix x = do
-  v <- readArray arr ix
-  writeArray arr ix $! f v x
-{-# INLINE updateArray #-}
-
-{-- IOArray --}
-
-getRowAsArray :: Int -> Int -> IOUArray (Int, Int) Int -> IO (IOUArray Int Int)
-getRowAsArray n w arr = do
-  -- 新しい一次元配列を作成
-  newArr <- newArray (0, w) minBound :: IO (IOUArray Int Int)
-  -- 元の配列から値を読み取り、新しい配列に書き込む
-  mapM_
-    ( \col -> do
-        val <- readArray arr (n, col)
-        writeArray newArr col val
-    )
-    [0 .. w]
-  return newArr
-
-{-- grid --}
-
-printMatrix :: UArray (Int, Int) Int -> IO ()
-printMatrix arr = do
-  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
-  let rows = [[arr ! (row, col) | col <- [minCol .. maxCol - 1]] | row <- [minRow .. maxRow - 1]]
-  putStr $ unlines [unwords (map show row) | row <- rows]
-
-twoDimensionalSum :: UArray (Int, Int) Int -> UArray (Int, Int) Int
-twoDimensionalSum arr =
-  listArray bounds_ $
-    concat $
-      scanl1 (zipWith (+)) $
-        map (scanl1 (+)) lists
-  where
-    bounds_ = bounds arr
-    lists = LS.chunksOf ((snd . snd) bounds_) $ elems arr
-
-findIndexFrom :: Int -> (a -> Bool) -> [a] -> Maybe Int
-findIndexFrom i f s =
-  case findIndex f (drop i s) of
-    Just j -> Just (i + j)
-    Nothing -> Nothing
-
-elemIndexFrom :: (Eq a) => Int -> a -> [a] -> Maybe Int
-elemIndexFrom i x = findIndexFrom i (== x)
-
-
 -- IntMod
 
 modulus :: Int
@@ -389,24 +322,6 @@ invMod a = case exEuclid a modulus of
 invIntMod :: IntMod -> IntMod
 invIntMod (IntMod a) = IntMod (invMod a)
 
--- array
-swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
-swapArray as i j = do
-  !a <- readArray as i
-  !b <- readArray as j
-  writeArray as j a
-  writeArray as i b
-
-findArrayIndices :: (IArray a e, Ix i) => (e -> Bool) -> a i e -> [i]
-findArrayIndices predicate as = [i | (i, e) <- assocs as, predicate e]
-
-(!?) :: (IArray a e, Ix i) => a i e -> i -> Maybe e
-(!?) arr i =
-  let b = bounds arr
-   in if inRange b i
-        then Just (arr ! i)
-        else Nothing
-
 {-- 文字列操作 --}
 
 -- 出現回数
@@ -439,19 +354,6 @@ distinctPermutations vs = permute (length vs) (L.sort vs)
     select :: (Ord a) => [a] -> [(a, [a])]
     select [] = []
     select (x : xs) = (x, xs) : [(y, x : ys) | (y, ys) <- select xs, y /= x]
-
-
-{--  リスト走査 --}
-safeHead :: [a] -> Maybe a
-safeHead [] = Nothing
-safeHead (x : _) = Just x
-
-safeGetElement :: [a] -> Int -> Maybe a
-safeGetElement [] _ = Nothing
-safeGetElement (x : xs) 0 = Just x
-safeGetElement (x : xs) n
-  | n < 0 = Nothing
-  | otherwise = safeGetElement xs (n - 1)
 
 -- 部分リストを抽出
 sublists :: [a] -> [[a]]
@@ -503,3 +405,27 @@ updateMultiple ((i, v) : updates) xs = updateMultiple updates (updateAt i v xs)
 -- マンハッタン距離 ∣x1−x2∣ + ∣y1−y2∣ を求める
 manhattanDistance :: Num a => (a, a) -> (a, a) -> a
 manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
+
+-- ユークリッド距離を求める
+euclidDistance :: Floating a => (a, a) -> (a, a) -> a
+euclidDistance (x1, y1) (x2, y2) = sqrt $ (x1 - x2) ^ 2 + (y1 - y2) ^ 2
+
+euclidDistFromInt :: (Int, Int) -> (Int, Int) -> Float
+euclidDistFromInt (x1, y1) (x2, y2) = sqrt $ (fromIntegral x1 - fromIntegral x2) ^ 2 + (fromIntegral y1 - fromIntegral y2) ^ 2
+
+-- sqrtせず2乗のまま求める
+euclidDistFromInt2 :: (Int, Int) -> (Int, Int) -> Int
+euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
+
+{-- debug --}
+dbg :: (Show a) => a -> ()
+dbg = case getDebugEnv of
+  Just _ -> (`traceShow` ())
+  Nothing -> const ()
+
+getDebugEnv :: Maybe String
+getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
+{-# NOINLINE getDebugEnv #-}
+
+traceDbg :: Show b => b -> b
+traceDbg itm = traceShow itm itm
