@@ -31,7 +31,7 @@ getRoot uf@(UnionFind parent _) x = do
 -- union by size
 unit :: UnionFind -> Int -> Int -> IO ()
 unit uf@(UnionFind parent size) x y = do
-  same <- isSame uf x y
+  same <- sameUF uf x y
   when same $ return ()
 
   x' <- getRoot uf x
@@ -49,6 +49,7 @@ unit uf@(UnionFind parent size) x y = do
         writeArray parent x' y'
         writeArray size y' (sizeX + sizeY)
 
+-- xとyが同じUFである(閉路をつくる)場合にtrueを返す
 sameUF :: UnionFind -> Int -> Int -> IO Bool
 -- (<*>) :: Applicative f => f (a -> b) -> f a -> f b を適用
 -- IO (Int -> Bool) -> IO Int -> IO Bool となる
@@ -68,6 +69,7 @@ getEdgeCount uf@(UnionFind _ size) u = do
 getInts :: IO [Int]
 getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
+-- 使い方
 main :: IO ()
 main = do
   [n, m] <- getInts

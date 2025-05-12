@@ -1,11 +1,4 @@
--- array
-swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
-swapArray as i j = do
-  !a <- readArray as i
-  !b <- readArray as j
-  writeArray as j a
-  writeArray as i b
-
+-- array用find
 findArrayIndices :: (IArray a e, Ix i) => (e -> Bool) -> a i e -> [i]
 findArrayIndices predicate as = [i | (i, e) <- assocs as, predicate e]
 

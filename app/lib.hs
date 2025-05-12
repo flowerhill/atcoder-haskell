@@ -22,56 +22,11 @@ import qualified Data.Vector.Unboxed as VU
 import Debug.Trace (traceShow, traceShowId)
 
 {- Library -}
-{-- dijkstra --}
-myDijkstra :: Ix v => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
-myDijkstra nextStates (l, u_) v0s = runSTUArray $ do
-  dist <- newArray (l, u_) maxBound
-
-  forM_ v0s $ \v -> do
-    writeArray dist v 0
-
-  let queue = Heap.fromList $ map (Heap.Entry 0) v0s
-
-  aux (Heap.uncons queue) dist
-  return dist
-  where
-    aux Nothing _ = return ()
-    aux (Just (Heap.Entry dv v, queue)) dist = do
-      garbage <- (dv >) <$> readArray dist v
-
-      if garbage
-        then aux (Heap.uncons queue) dist -- skip
-        else do
-          queue' <-
-            foldM
-              ( \q (u, w) -> do
-                  du <- readArray dist u
-
-                  let dv' = dv + w
-
-                  if dv' < du
-                    then do
-                      writeArray dist u dv'
-                      return $ Heap.insert (Heap.Entry dv' u) q
-                    else return q
-              )
-              queue
-              (nextStates v)
-
-          aux (Heap.uncons queue') dist
-
-graph2 :: (Ix i, Foldable t) => (i, i) -> t (i, i) -> Array i [i]
-graph2 b uvs = accumArray @Array (flip (:)) [] b $ concatMap (\(u, v) -> [(u, v), (v, u)]) uvs
-
-{- input IO -}
-readWords :: IO [String]
-readWords = words <$> getLine
+-- String
+getStrings :: IO [String]
+getStrings = map BC.unpack . BC.words <$> BC.getLine
 
 -- Int
-
-readInt :: IO Int
-readInt = readLn
-
 getInts :: IO [Int]
 getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
@@ -114,10 +69,10 @@ withInTimeDiff start diff time
   where
     end = (start + diff) `mod` 24
 
-printYN :: Bool -> IO ()
-printYN f = putStrLn $ bool "No" "Yes" f
+printYn :: Bool -> IO ()
+printYn f = putStrLn $ bool "No" "Yes" f
 
-printList :: Show a => [a] -> IO ()
+printList :: (Show a) => [a] -> IO ()
 printList lst = putStrLn $ unwords $ map show lst
 
 readGrid :: Int -> IO (V.Vector (V.Vector Char))
@@ -158,22 +113,20 @@ move 'U' (i, j) = (i - 1, j)
 move 'D' (i, j) = (i + 1, j)
 move _ pos = pos
 
-{-  data Query = Add String | Print | Del
-main :: iO ()
-main = do
-    qs <- replicateM q do
-    query <- words <$> getLine
-    return $ case query of
-      ["1", x] -> Add x
-      ["2"] -> Print
-      ["3"] -> Del -}
+move2@[left, right, up, down] = []
 
-{- main :: IO ()
-main = do
-  [n, m] <- readInputInts
-  abs <- fmap concat <$> replicateM m $ do
-    [a, b] <- readInputInts
-    return [(a, b), (b, a)] -}
+-- 整数の平方根を求める関数（ニュートン法）
+-- 精度の問題でこちらを使った方が良い
+iSqrt :: Integer -> Integer
+iSqrt n
+  | n < 0 = error "invalid parameter: cannot use negative number."
+  | n == 0 = 0
+  | otherwise = go (n `div` 2)
+  where
+    go x
+      | x * x <= n && (x + 1) * (x + 1) > n = x
+      | x * x > n = go ((x + n `div` x) `div` 2)
+      | otherwise = go (x + 1)
 
 isCube :: Int -> Bool
 isCube n = cubeRoot ^ 3 == n
@@ -202,7 +155,7 @@ isPalindromeInt n =
 {- memo回文平方数を求める処理 -}
 {-   let lst = filter isPalindrome $ map (^ 3) [1 .. 1000000] -}
 
-quicksort :: Ord a => [a] -> [a]
+quicksort :: (Ord a) => [a] -> [a]
 quicksort [] = []
 quicksort (x : xs) =
   let smallerSorted = quicksort [a | a <- xs, a <= x]
@@ -216,47 +169,6 @@ swapList i j xs
       let (ys, x : zs) = splitAt i xs
           (ws, y : vs) = splitAt (j - i - 1) zs
        in ys ++ [y] ++ ws ++ [x] ++ vs
-
--- リストのコンビネーション
-combinationList :: [[a]] -> [[a]]
-combinationList [] = [[]]
-combinationList (xs : xss) = [x : ys | x <- xs, ys <- combinationList xss]
-
--- 数字のパターンを重複を許して出す
-combinationsWithRepetition :: Int -> Int -> Int -> [[Int]]
-combinationsWithRepetition l r = go
-  where
-    go 0 = [[]]
-    go k = [x : xs | x <- [l .. r], xs <- go (k - 1), x <= head (x : xs) || null xs]
-
--- 指定した数だけ抽出して組み合わせる
-combinations :: Int -> [a] -> [[a]]
-combinations _ [] = []
-combinations n as@(_ : xs)
-  | n == 0 = [[]]
-  | n == 1 = map pure as
-  | n == l = pure as
-  | n > l = []
-  | otherwise = run (l - 1) (n - 1) as $ combinations (n - 1) xs
-  where
-    l = length as
-
-    run :: Int -> Int -> [a] -> [[a]] -> [[a]]
-    run m k ys cs
-      | m == k = map (ys ++) cs
-      | otherwise = case take (m - k + 1) ys of
-          (q : qs) -> do
-            let dc = product [(m - k + 1) .. (m - 1)] `div` product [1 .. (k - 1)]
-            map (q :) cs ++ run (m - 1) k qs (drop dc cs)
-          [] -> error "Invalid Case"
-
-dfs :: G.Graph -> IS.IntSet -> Int -> IS.IntSet
-dfs g seen v
-  | IS.member v seen = seen
-  | otherwise = L.foldl' (dfs g) seen' nextVs
-  where
-    nextVs = g IA.! v
-    seen' = IS.insert v seen
 
 modifyArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
 modifyArray arr idx f = do
@@ -312,6 +224,14 @@ exEuclid = fn 1 0 0 1
       | otherwise =
           let (q, r) = a `divMod` b
            in fn s' t' (s - q * s') (t - q * t') b r
+
+-- 等比数列の和
+sumOfGeo :: (Integral a, Integral b) => a -> a -> b -> a
+sumOfGeo a r n = a * (r ^ n - 1) `div` (r - 1)
+
+-- 等差数列の和
+sumOfArith :: (Integral a, Integral b) => a -> a -> b -> a
+sumOfArith = undefined
 
 invMod :: Int -> Int
 invMod a = case exEuclid a modulus of
@@ -403,11 +323,11 @@ updateMultiple [] xs = xs
 updateMultiple ((i, v) : updates) xs = updateMultiple updates (updateAt i v xs)
 
 -- マンハッタン距離 ∣x1−x2∣ + ∣y1−y2∣ を求める
-manhattanDistance :: Num a => (a, a) -> (a, a) -> a
+manhattanDistance :: (Num a) => (a, a) -> (a, a) -> a
 manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 
 -- ユークリッド距離を求める
-euclidDistance :: Floating a => (a, a) -> (a, a) -> a
+euclidDistance :: (Floating a) => (a, a) -> (a, a) -> a
 euclidDistance (x1, y1) (x2, y2) = sqrt $ (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
 euclidDistFromInt :: (Int, Int) -> (Int, Int) -> Float
@@ -416,6 +336,22 @@ euclidDistFromInt (x1, y1) (x2, y2) = sqrt $ (fromIntegral x1 - fromIntegral x2)
 -- sqrtせず2乗のまま求める
 euclidDistFromInt2 :: (Int, Int) -> (Int, Int) -> Int
 euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
+
+-- 整数の平方根を求める関数（ニュートン法）
+-- 精度の問題でこちらを使った方が良い
+iSqrt :: Integer -> Integer
+iSqrt n
+  | n < 0 = error "invalid parameter: cannot use negative number."
+  | n == 0 = 0
+  | otherwise = go (n `div` 2)
+  where
+    go x
+      | x * x <= n && (x + 1) * (x + 1) > n = x
+      | x * x > n = go ((x + n `div` x) `div` 2)
+      | otherwise = go (x + 1)
+
+countBy :: (Foldable t) => (e -> Bool) -> t e -> Int
+countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 
 {-- debug --}
 dbg :: (Show a) => a -> ()
@@ -427,5 +363,5 @@ getDebugEnv :: Maybe String
 getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
 {-# NOINLINE getDebugEnv #-}
 
-traceDbg :: Show b => b -> b
+traceDbg :: (Show b) => b -> b
 traceDbg itm = traceShow itm itm

@@ -14,7 +14,7 @@ type Dist = IM.IntMap Int
 
 type Bounds = (Int, Int)
 
-buildGraph :: Bounds -> [[Int]] -> Graph
-buildGraph (start, end) edges = accumArray (flip (:)) [] (start, end) edges'
+buildG :: Bounds -> [[Int]] -> Graph
+buildG (start, end) edges = accumArray (flip (:)) [] (start, end) edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges

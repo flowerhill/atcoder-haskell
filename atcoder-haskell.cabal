@@ -31,7 +31,7 @@ executable atcoder-haskell
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.16.4.0,
+    build-depends:    base ^>=4.17.1.0,
                       mtl,
                       bytestring,
                       vector,

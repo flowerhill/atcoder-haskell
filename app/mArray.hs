@@ -1,11 +1,5 @@
 {-- MArray --}
 
-modifyArray :: (MArray a e m, Ix i) => a i e -> i -> (e -> e) -> m ()
-modifyArray ary ix f = do
-  v <- readArray ary ix
-  writeArray ary ix $! f v
-{-# INLINE modifyArray #-}
-
 swapArray :: (MArray a e m, Ix i) => a i e -> i -> i -> m ()
 swapArray as i j = do
   a <- readArray as i
@@ -14,14 +8,14 @@ swapArray as i j = do
   writeArray as i $! b
 {-# INLINE swapArray #-}
 
-updateArray :: (MArray a t m, Ix i) => a i t -> (t -> t) -> i -> m ()
-updateArray arr f i = do
+updateArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
+updateArray arr i f = do
   val <- readArray arr i
   writeArray arr i (f val)
 {-# INLINE updateArray #-}
 
-updateArray2 :: (MArray a e m, Ix i) => (e -> e' -> e) -> a i e -> i -> e' -> m ()
-updateArray2 f arr ix x = do
+updateArray2 :: (MArray a e m, Ix i) => a i e -> i -> e' -> (e -> e' -> e) -> m ()
+updateArray2 arr ix x f = do
   v <- readArray arr ix
   writeArray arr ix $! f v x
 {-# INLINE updateArray2 #-}

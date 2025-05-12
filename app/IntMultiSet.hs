@@ -122,6 +122,16 @@ elemsMS IntMultiSet {mapMS = m} = IM.elems m
 nullMS :: IntMultiSet -> Bool
 nullMS IntMultiSet {mapMS = m} = IM.null m
 
+deleteGEViewMS :: Int -> IntMultiSet -> ([(Int, Int)], IntMultiSet)
+deleteGEViewMS x s0 = loop s0 []
+  where
+    loop s acc = case lookupGEMS x s of
+      Just v -> do
+        let cnt = countMS v s
+            s' = deleteNMS cnt v s
+        loop s' ((v, cnt) : acc)
+      Nothing -> (acc, s)
+
 -- x 以下の値を k 個取得する。k 個ない場合は Nothing
 -- >>> topKLE 3 3 (fromListMS [0, 0, 2, 2, 5])
 -- Just [2,2,0]
