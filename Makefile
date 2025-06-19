@@ -74,4 +74,4 @@ help:
 	@echo "Debug mode: make <target> DEBUG=1"
 	@echo "Example: make test-debug"
 
-.PHONY: build build-debug test test-debug test-case submit-oj submit deps clean show-debug-info help
+.PHONY: build build-debug build-quiet test test-debug test-case submit-oj submit deps clean show-debug-info help

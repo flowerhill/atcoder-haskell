@@ -2,6 +2,21 @@
 
 AtCoder競技プログラミング用のHaskellプロジェクトテンプレートです。
 
+## 📋 Requirements
+
+- `cabal` (Haskell build tool)
+- `oj` (online-judge-tools)
+- `acc` (atcoder-cli)
+
+## 🚀 Setup
+
+```bash
+# テンプレートをaccのconfig-dirに配置
+cp -r atcoder-haskell `acc config-dir`/
+# default-templateに設定 (お好みで)
+acc config default-template atcoder-haskell
+```
+
 ## 🚀 クイックスタート
 
 ```bash
