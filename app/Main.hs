@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# HLINT ignore "Use lambda-case" #-}
@@ -64,33 +65,11 @@ import Debug.Trace (traceShow)
 import GHC.IO (unsafePerformIO)
 import System.Environment (lookupEnv)
 
-countFiles :: (Integral a) => [a] -> a -> a
-countFiles as t = sum [t `div` a | a <- as]
-
 main :: IO ()
 main = do
-  [n, k] <- getInts
-  as <- getInts
-
-  print $ snd $ bisect (-1, 10 ^ 9) (\t -> countFiles as t >= k)
+  return ()
 
 {-- lib --}
-
--- | 左が false / 右が true で境界を引く
-bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect (ng, ok) f
-  | abs (ok - ng) == 1 = (ng, ok)
-  | f m = bisect (ng, m) f
-  | otherwise = bisect (m, ok) f
-  where
-    m = (ok + ng) `div` 2
-
-updateArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
-updateArray arr i f = do
-  val <- readArray arr i
-  writeArray arr i (f val)
-{-# INLINE updateArray #-}
-
 -- inputs
 getInts :: IO [Int]
 getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
@@ -146,14 +125,16 @@ instance (Num a, Num b) => Num (a, b) where
   negate (a1, b1) = (negate a1, negate b1)
 
 {-- debug --}
-dbg :: (Show a) => a -> ()
-dbg = case getDebugEnv of
-  Just _ -> (`traceShow` ())
-  Nothing -> const ()
+#ifdef DEBUG
+dbg :: Show a => a -> ()
+dbg !x = let !_ = traceShow x () in ()
 
-getDebugEnv :: Maybe String
-getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
-{-# NOINLINE getDebugEnv #-}
+fnDbg :: (Show a) => a -> a
+fnDbg !x = traceShow x x
+#else
+dbg :: Show a => a -> ()
+dbg _ = ()
 
-traceDbg :: (Show b) => b -> b
-traceDbg itm = traceShow itm itm
+fnDbg :: Show a => a -> a
+fnDbg x = x
+#endif

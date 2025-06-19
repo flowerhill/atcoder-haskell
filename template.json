@@ -5,7 +5,7 @@
     "static": [
       "atcoder-haskell.cabal",
       "cabal.project.local",
-      "app",
+      "lib",
       "Makefile",
       ".gitignore"
     ],

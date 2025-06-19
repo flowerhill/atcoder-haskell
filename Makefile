@@ -2,7 +2,6 @@ PROJECT_NAME = my-contest
 EXEC = main
 SOURCE = app/Main.hs
 
-# デバッグフラグの設定
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
     DEBUG_FLAGS = -DDEBUG -fforce-recomp
@@ -12,29 +11,26 @@ else
     BUILD_TYPE = release
 endif
 
-# 基本的なGHCオプション
 BASE_GHC_OPTIONS = -O2 -Wall -threaded -rtsopts -with-rtsopts=-N -funbox-strict-fields -fexcess-precision
 
-# ビルド（リリース版）
 build:
 	cabal build --enable-optimization=2 --ghc-options="$(BASE_GHC_OPTIONS)"
 
-# デバッグビルド
 build-debug:
 	cabal build --enable-optimization=2 --ghc-options="$(BASE_GHC_OPTIONS) $(DEBUG_FLAGS)"
 
-# テスト（リリース版）
-test: build
+build-quiet:
+	@cabal build --enable-optimization=2 --ghc-options="$(BASE_GHC_OPTIONS)" > /dev/null 2>&1
+
+test: build-quiet
 	@echo "Running tests in $(BUILD_TYPE) mode..."
 	oj test -c "cabal run"
 
-# デバッグテスト
 test-debug:
 	@echo "Running tests in debug mode..."
 	$(MAKE) build-debug DEBUG=1
 	oj test -c "cabal run"
 
-# 単一テストケースでデバッグ
 test-case:
 ifndef CASE
 	$(error CASE is not set. Usage: make test-case CASE=1)
@@ -49,7 +45,6 @@ submit-oj: test
 submit: test
 	acc submit -- $(SOURCE) --language haskell
 
-# 依存関係のインストール
 deps:
 	cabal build --dependencies-only
 
@@ -66,6 +61,7 @@ help:
 	@echo "Available targets:"
 	@echo "  build              - Build release version"
 	@echo "  build-debug        - Build debug version"
+	@echo "  test-quiet         - Run tests (release, silent build)"
 	@echo "  test               - Run tests (release)"
 	@echo "  test-debug         - Run tests (debug)"
 	@echo "  test-case CASE=N   - Run specific test case (debug)"
