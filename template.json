@@ -1,0 +1,14 @@
+{
+  "task": {
+    "program": ["app/Main.hs"],
+    "submit": "app/Main.hs",
+    "static": [
+      "atcoder-haskell.cabal",
+      "cabal.project.local",
+      "app",
+      "Makefile",
+      ".gitignore"
+    ],
+    "testdir": "test"
+  }
+}
