@@ -7,7 +7,9 @@
       "cabal.project.local",
       "lib",
       "Makefile",
-      ".gitignore"
+      ".gitignore",
+      ".venv",
+      ".envrc"
     ],
     "testdir": "test"
   }

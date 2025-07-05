@@ -20,7 +20,7 @@ build-debug:
 	cabal build --enable-optimization=2 --ghc-options="$(BASE_GHC_OPTIONS) $(DEBUG_FLAGS)"
 
 build-quiet:
-	@cabal build --enable-optimization=2 --ghc-options="$(BASE_GHC_OPTIONS)" > /dev/null 2>&1
+	@cabal build > /dev/null 2>&1
 
 test: build-quiet
 	@echo "Running tests in $(BUILD_TYPE) mode..."
