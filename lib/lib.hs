@@ -353,6 +353,27 @@ iSqrt n
 countBy :: (Foldable t) => (e -> Bool) -> t e -> Int
 countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 
+{-- digits --}
+toBinary :: Int -> [Bool]
+toBinary = unfoldr f
+  where
+    f 0 = Nothing
+    f i = Just (q == 1, p)
+      where
+        (p, q) = i `divMod` 2
+
+toDigits :: (Integral a) => a -> a -> [a]
+toDigits _ 0 = [0]
+toDigits n a = reverse $ unfoldr f a
+  where
+    f 0 = Nothing
+    f x = Just (q, p)
+      where
+        (p, q) = divMod x n
+
+fromDigits :: (Foldable t, Num a) => a -> t a -> a
+fromDigits n = foldl' (\acc b -> acc * n + b) 0
+
 {-- debug --}
 dbg :: (Show a) => a -> ()
 dbg = case getDebugEnv of
