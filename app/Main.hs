@@ -46,12 +46,12 @@ import qualified Data.IORef as MV
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
 import Data.Ix
-import Data.List (elemIndices, find, findIndex, foldl', foldl1', group, groupBy, isInfixOf, mapAccumL, nub, partition, permutations, scanl', sort, sortBy, sortOn, subsequences, tails, transpose, unfoldr)
-import Data.List.Extra (breakEnd, chunksOf, groupOn, lower, maximumOn, nubOrd, snoc, splitOn, sum', upper)
+import Data.List
+import Data.List.Extra
 import qualified Data.Map as M
-import Data.Maybe (catMaybes, fromJust, fromMaybe, isJust, mapMaybe)
-import Data.Mutable (MutableRef (..))
-import Data.Ord (Down (Down), comparing)
+import Data.Maybe
+import Data.Mutable
+import Data.Ord
 import Data.Ratio ((%))
 import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), ViewL ((:<)), ViewR ((:>)), (|>))
