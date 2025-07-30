@@ -32,35 +32,35 @@ import Data.Bifoldable (Bifoldable (bifold))
 import Data.Bifunctor (bimap)
 import Data.Bits (xor)
 import Data.Bool (bool)
-import qualified Data.ByteString.Char8 as BC
+import Data.ByteString.Char8 qualified as BC
 import Data.Char (digitToInt, ord)
-import qualified Data.Char as C
+import Data.Char qualified as C
 import Data.Foldable (for_)
 import Data.Foldable.Extra (traverse_)
 import Data.Function (fix, on)
 import Data.Graph.Inductive (deg', neighbors')
-import qualified Data.HashSet as HS
-import qualified Data.Heap as H
+import Data.HashSet qualified as HS
+import Data.Heap qualified as H
 import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
-import qualified Data.IORef as MV
-import qualified Data.IntMap as IM
-import qualified Data.IntSet as IS
+import Data.IORef qualified as MV
+import Data.IntMap qualified as IM
+import Data.IntSet qualified as IS
 import Data.Ix
 import Data.List
 import Data.List.Extra
-import qualified Data.Map as M
+import Data.Map qualified as M
 import Data.Maybe
 import Data.Mutable
 import Data.Ord
 import Data.Ratio ((%))
 import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), ViewL ((:<)), ViewR ((:>)), (|>))
-import qualified Data.Sequence as Seq
-import qualified Data.Set as S
-import qualified Data.Vector as V
-import qualified Data.Vector.Generic as VG
-import qualified Data.Vector.Unboxed as VU
-import qualified Data.Vector.Unboxed.Mutable as MV
+import Data.Sequence qualified as Seq
+import Data.Set qualified as S
+import Data.Vector qualified as V
+import Data.Vector.Generic qualified as VG
+import Data.Vector.Unboxed qualified as VU
+import Data.Vector.Unboxed.Mutable qualified as MV
 import Debug.Trace (traceShow)
 import GHC.IO (unsafePerformIO)
 import System.Environment (lookupEnv)
@@ -73,6 +73,9 @@ main = do
 -- inputs
 getInts :: IO [Int]
 getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
+
+getInteger :: IO [Integer]
+getInteger = unfoldr (BC.readInteger . BC.dropWhile C.isSpace) <$> BC.getLine
 
 -- outputs
 printYn :: Bool -> IO ()
