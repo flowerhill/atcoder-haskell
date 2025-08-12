@@ -258,6 +258,9 @@ substring start len str = take len (drop start str)
 substringK :: Int -> String -> [String]
 substringK k s = [substring i k s | i <- [0 .. length s - k]]
 
+substrings :: String -> [String]
+substrings s = concat [substringK i s | i <- [1 .. length s]]
+
 -- 文字列を1文字変更する関数
 changeChar :: String -> String -> Int -> String
 changeChar s t i = take i s ++ [t !! i] ++ drop (i + 1) s
