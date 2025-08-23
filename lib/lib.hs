@@ -33,6 +33,9 @@ getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 getPairInt :: IO (Int, Int)
 getPairInt = (\[a, b] -> (a, b)) <$> getInts
 
+charToDigit :: Char -> Int
+charToDigit c = ord c - ord '0'
+
 parseLineIntList :: BC.ByteString -> [Int]
 parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
 
