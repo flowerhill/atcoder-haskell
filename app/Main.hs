@@ -128,6 +128,23 @@ instance (Num a, Num b) => Num (a, b) where
   negate :: (Num a, Num b) => (a, b) -> (a, b)
   negate (a1, b1) = (negate a1, negate b1)
 
+-- 符号なし32bit整数の限界値
+maxUnsignedInt32 = 4294967295
+
+minUnsignedInt32 = -4294967295
+
+-- 符号つき32bit整数の最大値
+minSignedInt32 = -2147483648
+
+-- 符号なし64bit整数の限界値
+-- 64bit
+maxUnsignedInt64 = 18446744073709551615
+
+minUnsignedInt64 = -18446744073709551615
+
+-- 符号つき64bit整数の最大値
+maxSignedInt64 = 9223372036854775807
+
 {-- debug --}
 #ifdef DEBUG
 dbg :: Show a => a -> ()
