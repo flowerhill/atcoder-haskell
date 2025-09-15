@@ -59,12 +59,15 @@ import Data.Sequence (Seq (Empty, (:<|), (:|>)), ViewL ((:<)), ViewR ((:>)), (|>
 import Data.Sequence qualified as Seq
 import Data.Set qualified as S
 import Data.Vector qualified as V
+import Data.Vector.Algorithms.Intro qualified as VAI
 import Data.Vector.Generic qualified as VG
 import Data.Vector.Unboxed qualified as VU
 import Data.Vector.Unboxed.Mutable qualified as MV
 import Debug.Trace (traceShow)
 import GHC.IO (unsafePerformIO)
 import System.Environment (lookupEnv)
+
+{-# RULES "Force inline VAI.sort" VAI.sort = VAI.sortBy compare #-}
 
 main :: IO ()
 main = do
