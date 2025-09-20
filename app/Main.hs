@@ -81,6 +81,9 @@ getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 getInteger :: IO [Integer]
 getInteger = unfoldr (BC.readInteger . BC.dropWhile C.isSpace) <$> BC.getLine
 
+getTuple :: IO (Int, Int)
+getTuple = fromListToTuple <$> getInts
+
 -- outputs
 printYn :: Bool -> IO ()
 printYn f = putStrLn $ bool "No" "Yes" f
