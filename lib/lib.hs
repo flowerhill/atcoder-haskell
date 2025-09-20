@@ -78,8 +78,18 @@ printYn f = putStrLn $ bool "No" "Yes" f
 printList :: (Show a) => [a] -> IO ()
 printList lst = putStrLn $ unwords $ map show lst
 
-readGrid :: Int -> IO (V.Vector (V.Vector Char))
-readGrid n = V.fromList <$> replicateM n (V.fromList <$> getLine)
+-- Grid
+-- Vector版
+getGridVec :: Int -> IO (V.Vector (V.Vector Char))
+getGridVec n = V.fromList <$> replicateM n (V.fromList . BC.unpack <$> BC.getLine)
+
+-- UArray版
+-- inputs
+getGridUArray :: (Ix i) => (i, i) -> Int -> IO (UArray i Char)
+getGridUArray bnds n = do
+  lines <- replicateM n BC.getLine
+  let chars = concatMap BC.unpack lines
+  return $ listArray bnds chars
 
 trisect :: (Int, Int) -> (Int -> Int) -> (Int, Int)
 trisect (l, r) f
@@ -184,7 +194,7 @@ ceilDiv a b = ceiling $ a / b
 -- IntMod
 
 modulus :: Int
-modulus = 998244353
+modulus = 1000000007
 
 addMod :: Int -> Int -> Int
 addMod x y = (x + y) `mod` modulus
@@ -202,9 +212,26 @@ sumMod :: [Int] -> Int
 sumMod = foldl' addMod 0
 {-# INLINE sumMod #-}
 
+divMod2 :: Int -> Int -> Int
+divMod2 x y = x `mulMod` powMod y (modulus - 2)
+{-# INLINE divMod2 #-}
+
 productMod :: [Int] -> Int
 productMod = foldl' mulMod 1
 {-# INLINE productMod #-}
+
+-- 繰り返し二乗法を使っている
+powMod :: Int -> Int -> Int
+powMod base exp
+  | exp < 0 = error "powMod: negative exponent"
+  | exp == 0 = 1
+  | otherwise = powMod' (base `mod` modulus) exp 1
+  where
+    powMod' _ 0 acc = acc
+    powMod' b e acc
+      | e `mod` 2 == 1 = powMod' (mulMod b b) (e `div` 2) (mulMod acc b)
+      | otherwise = powMod' (mulMod b b) (e `div` 2) acc
+{-# INLINE powMod #-}
 
 newtype IntMod = IntMod Int deriving (Eq, Show, Read)
 
