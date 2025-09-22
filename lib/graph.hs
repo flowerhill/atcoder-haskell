@@ -457,7 +457,7 @@ getComponentsArray graph =
 -- =============================================================================
 
 -- グリッド用の遷移関数例
-gridGetNext :: Array (Int, Int) Char -> Int -> Int -> (Int, Int) -> [(Int, Int)]
+gridGetNext :: UArray (Int, Int) Char -> Int -> Int -> (Int, Int) -> [(Int, Int)]
 gridGetNext grid h w (r, c) =
   let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
       neighbors = map (bimap (r +) (c +)) directions
@@ -465,7 +465,7 @@ gridGetNext grid h w (r, c) =
    in filter valid neighbors
 
 -- グリッド島カウント例（座標を1次元に変換）
-countGridIslands :: Int -> Int -> Array (Int, Int) Char -> Int
+countGridIslands :: Int -> Int -> UArray (Int, Int) Char -> Int
 countGridIslands h w grid =
   let coordToIndex (r, c) = (r - 1) * w + c
       indexToCoord idx = let (r', c') = divMod (idx - 1) w in (r' + 1, c' + 1)
