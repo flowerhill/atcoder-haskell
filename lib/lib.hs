@@ -8,7 +8,6 @@ import qualified Control.Applicative
 import Control.Monad
 import Control.Monad.ST
 import Control.Monad.State
-import Data.Array.IArray
 import qualified Data.ByteString.Char8 as BS
 import Data.Char (GeneralCategory (Control), digitToInt, isSpace, readLitChar)
 import qualified Data.Graph as G
@@ -78,19 +77,6 @@ printYn f = putStrLn $ bool "No" "Yes" f
 printList :: (Show a) => [a] -> IO ()
 printList lst = putStrLn $ unwords $ map show lst
 
--- Grid
--- Vector版
-getGridVec :: Int -> IO (V.Vector (V.Vector Char))
-getGridVec n = V.fromList <$> replicateM n (V.fromList . BC.unpack <$> BC.getLine)
-
--- UArray版
--- inputs
-getGridUArray :: (Ix i) => (i, i) -> Int -> IO (UArray i Char)
-getGridUArray bnds n = do
-  lines <- replicateM n BC.getLine
-  let chars = concatMap BC.unpack lines
-  return $ listArray bnds chars
-
 trisect :: (Int, Int) -> (Int -> Int) -> (Int, Int)
 trisect (l, r) f
   | r - l <= 2 = (l, r)
@@ -112,21 +98,6 @@ sieve n = go 2 (IntSet.fromList [2 .. n])
     go p s
       | p * p > n = s
       | otherwise = go (p + 1) (IntSet.difference s (IntSet.fromList [p * p, p * p + p .. n]))
-
-printIntGrid :: (Show e, IArray a e, Ix v) => a (v, Int) e -> IO ()
-printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elems grid)
-  where
-    ((_, w1), (_, w2)) = bounds grid
-    w = w2 + 1 - w1
-
-mvChar :: Char -> (Int, Int) -> (Int, Int)
-mvChar 'L' (i, j) = (i, j - 1)
-mvChar 'R' (i, j) = (i, j + 1)
-mvChar 'U' (i, j) = (i - 1, j)
-mvChar 'D' (i, j) = (i + 1, j)
-mvChar _ pos = pos
-
-mvList@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)] :: [(Int, Int)]
 
 -- 整数の平方根を求める関数（ニュートン法）
 -- 精度の問題でこちらを使った方が良い
@@ -182,11 +153,6 @@ swapList i j xs
       let (ys, x : zs) = splitAt i xs
           (ws, y : vs) = splitAt (j - i - 1) zs
        in ys ++ [y] ++ ws ++ [x] ++ vs
-
-modifyArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
-modifyArray arr idx f = do
-  v <- readArray arr idx
-  writeArray arr idx $ f
 
 ceilDiv :: Double -> Double -> Int
 ceilDiv a b = ceiling $ a / b
@@ -311,28 +277,6 @@ distinctPermutations vs = permute (length vs) (L.sort vs)
 -- 部分リストを抽出
 sublists :: [a] -> [[a]]
 sublists = filter (not . null) . concatMap inits . tails
-
--- 斜め方向に走査
-diag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
-diag arr =
-  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
-      coords =
-        [ [ (i, j) | i <- [minRow .. maxRow], j <- [minCol .. maxCol], i - j == sum
-          ]
-          | sum <- [minRow - maxCol .. maxRow - minCol]
-        ]
-   in [[arr ! c | c <- cc] | cc <- coords]
-
--- 逆斜め方向に走査
-revDiag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
-revDiag arr =
-  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
-      coords =
-        [ [ (i, j) | i <- [minRow .. maxRow], j <- [maxCol, maxCol - 1 .. minCol], i + j == sum
-          ]
-          | sum <- [minRow + minCol .. maxRow + maxCol]
-        ]
-   in [[arr ! c | c <- cc] | cc <- coords]
 
 {-- リスト変更 --}
 -- インデックスと新しい値を指定して、リストの要素を更新する
