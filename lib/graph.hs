@@ -148,8 +148,7 @@ bfsShortestPathSTUArray bounds getNext start = runSTUArray $ do
           then return acc
           else do
             let neighbors = filter (inRange bounds) (getNext curr)
-            newNodes <- foldM (checkNeighbor currDist) acc neighbors
-            return newNodes
+            foldM (checkNeighbor currDist) acc neighbors
 
       checkNeighbor currDist acc neighbor = do
         neighborDist <- readArray distance neighbor
