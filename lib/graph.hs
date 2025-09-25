@@ -15,25 +15,25 @@ import Data.STRef
 -- =============================================================================
 
 -- 重みなしグラフ構築(有向グラフ)
-buildG :: forall a. (Ix a) => (a, a) -> [[(a, a)]] -> Array a [a]
+buildG :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v] -> [(u, v)]) edges
 
 -- 重みなしグラフ構築(無向グラフ)
-buildG2 :: forall a. (Ix a) => (a, a) -> [[(a, a)]] -> Array a [a]
+buildG2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG2 bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v] -> [(u, v), (v, u)]) edges
 
 -- 重みつきグラフ構築(有向グラフ)
-buildGW :: forall a. (Ix a) => (a, a) -> [[(a, a, Int)]] -> Array a [(a, Int)]
+buildGW :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges
 
 -- 重みつきグラフ構築(無向グラフ)
-buildGW2 :: forall a. (Ix a) => (a, a) -> [[(a, a, Int)]] -> Array a [(a, Int)]
+buildGW2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW2 bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w)), (v, (u, w))]) edges
@@ -346,8 +346,10 @@ countComponentsBFS bounds getNext = runST $ do
     unless seen $ do
       modifySTRef' count (+ 1)
       bfs v
+
 is
-  readSTRef count
+  readSTRef
+  count
 
 -- 各成分の頂点リスト（DFS）
 getComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
