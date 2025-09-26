@@ -537,27 +537,80 @@ getNextGrid8 grid wallChar (r, c) =
         ]
    in validNeighbors
 
--- 斜め方向に走査
-diag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
-diag arr =
-  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
-      coords =
-        [ [ (i, j) | i <- [minRow .. maxRow], j <- [minCol .. maxCol], i - j == sum
-          ]
-          | sum <- [minRow - maxCol .. maxRow - minCol]
-        ]
-   in [[arr ! c | c <- cc] | cc <- coords]
+-- 距離の2乗がちょうどMになる移動先を列挙
+getNextMoves :: Int -> Int -> (Int, Int) -> [(Int, Int)]
+getNextMoves n m (r, c) =
+  [ (nr, nc)
+    | dr <- [-n .. n],
+      dc <- [-n .. n],
+      dr * dr + dc * dc == m,
+      let nr = r + dr,
+      let nc = c + dc,
+      inRange (1, n) nr,
+      inRange (1, n) nc
+  ]
 
--- 逆斜め方向に走査
-revDiag :: (IArray UArray a) => UArray (Int, Int) a -> [[a]]
-revDiag arr =
-  let ((minRow, minCol), (maxRow, maxCol)) = bounds arr
-      coords =
-        [ [ (i, j) | i <- [minRow .. maxRow], j <- [maxCol, maxCol - 1 .. minCol], i + j == sum
-          ]
-          | sum <- [minRow + minCol .. maxRow + maxCol]
-        ]
-   in [[arr ! c | c <- cc] | cc <- coords]
+-- グリッド版: 連結成分数(DFS) - 特定文字のみ対象
+countGridComponentsDFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
+countGridComponentsDFS grid targetChar getNext = runST $ do
+  let bounds' = bounds grid
+  visited <- newArray bounds' False :: ST s (STUArray s a Bool)
+  count <- newSTRef 0
+
+  let targetPositions = [pos | pos <- range bounds', grid ! pos == targetChar]
+
+  let dfs v = do
+        seen <- readArray visited v
+        unless seen $ do
+          writeArray visited v True
+          mapM_ dfs (getNext v)
+
+  forM_ targetPositions $ \pos -> do
+    seen <- readArray visited pos
+    unless seen $ do
+      modifySTRef' count (+ 1)
+      dfs pos
+
+  readSTRef count
+
+-- グリッド版: 連結成分数(BFS) - 特定文字のみ対象
+countGridComponentsBFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
+countGridComponentsBFS grid targetChar getNext = runST $ do
+  let bounds' = bounds grid
+  visited <- newArray bounds' False :: ST s (STUArray s a Bool)
+  count <- newSTRef 0
+
+  let targetPositions = [pos | pos <- range bounds', grid ! pos == targetChar]
+
+  let bfs startV = do
+        queue <- newSTRef [startV]
+        writeArray visited startV True
+
+        let loop = do
+              q <- readSTRef queue
+              case q of
+                [] -> return ()
+                (v : rest) -> do
+                  writeSTRef queue rest
+                  neighbors <-
+                    filterM
+                      ( \u -> do
+                          seen <- readArray visited u
+                          return (not seen)
+                      )
+                      (getNext v)
+                  mapM_ (\u -> writeArray visited u True) neighbors
+                  modifySTRef' queue (++ neighbors)
+                  loop
+        loop
+
+  forM_ targetPositions $ \pos -> do
+    seen <- readArray visited pos
+    unless seen $ do
+      modifySTRef' count (+ 1)
+      bfs pos
+
+  readSTRef count
 
 printIntGrid :: (Show e, IArray a e, Ix v) => a (v, Int) e -> IO ()
 printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elems grid)
