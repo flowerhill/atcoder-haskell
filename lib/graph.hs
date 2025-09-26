@@ -346,9 +346,7 @@ countComponentsBFS bounds getNext = runST $ do
       modifySTRef' count (+ 1)
       bfs v
 
-is
-  readSTRef
-  count
+  readSTRef count
 
 -- 各成分の頂点リスト（DFS）
 getComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
