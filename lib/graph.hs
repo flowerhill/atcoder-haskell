@@ -5,10 +5,11 @@ import Control.Monad.ST
 import Data.Array
 import Data.Array.ST
 import Data.Array.Unboxed
-import qualified Data.IntSet as IS
+import qualified Data.Set as Set
 import Data.Ix
 import Data.List (foldl')
 import Data.STRef
+import qualified Data.Sequence as Seq
 
 -- =============================================================================
 -- グラフ構築関数（汎用化版）
@@ -39,159 +40,142 @@ buildGW2 bounds edges = accumArray (flip (:)) [] bounds edges'
     edges' = concatMap (\[u, v, w] -> [(u, (v, w)), (v, (u, w))]) edges
 
 -- =============================================================================
--- BFS系関数（汎用化版）
+-- BFS系関数（Data.Sequence版）
 -- =============================================================================
 
--- BFS単始点版（immutable）
-bfsSingleSource :: forall a. (Ix a) => (a -> [a]) -> a -> IS.IntSet
-bfsSingleSource getNext start = go IS.empty [start]
+-- BFS単始点版（immutable, Data.Sequence使用）
+bfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> a -> Set.Set a
+bfsSingleSource getNext start = go Set.empty (Seq.singleton start)
   where
-    go visited [] = visited
-    go visited queue =
-      let nodes' = [node | curr <- queue, node <- getNext curr, not (IS.member (fromEnum node) visited)]
-          visited' = foldl (flip IS.insert) visited (map fromEnum queue)
-       in if null nodes'
-            then visited'
-            else go visited' nodes'
+    go visited queue = case Seq.viewl queue of
+      Seq.EmptyL -> visited
+      curr Seq.:< rest ->
+        if Set.member curr visited
+          then go visited rest
+          else
+            let visited' = Set.insert curr visited
+                neighbors = getNext curr
+                newNodes = [n | n <- neighbors, not (Set.member n visited')]
+                queue' = rest Seq.>< Seq.fromList newNodes
+             in go visited' queue'
 
--- BFS複数始点版（immutable）
-bfs :: forall a. (Ix a) => (a -> [a]) -> IS.IntSet -> [a] -> IS.IntSet
-bfs getNext visited [] = visited
-bfs getNext visited queue =
-  let nodes' = [node | curr <- queue, node <- getNext curr, not (IS.member (fromEnum node) visited)]
-      visited' = foldl (flip IS.insert) visited (map fromEnum nodes')
-   in if null nodes'
-        then visited
-        else bfs getNext visited' nodes'
+-- BFS複数始点版（immutable, Data.Sequence使用）
+bfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> [a] -> Set.Set a
+bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
+  where
+    go visited queue = case Seq.viewl queue of
+      Seq.EmptyL -> visited
+      curr Seq.:< rest ->
+        if Set.member curr visited
+          then go visited rest
+          else
+            let visited' = Set.insert curr visited
+                neighbors = getNext curr
+                newNodes = [n | n <- neighbors, not (Set.member n visited')]
+                queue' = rest Seq.>< Seq.fromList newNodes
+             in go visited' queue'
 
--- BFS単始点版（mutable）
+-- BFS単始点版（mutable, Data.Sequence使用）
 bfsSingleSourceSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
 bfsSingleSourceSTUArray bounds getNext start = runSTUArray $ do
   visited <- newArray bounds False
-  queueRef <- newSTRef [start]
+  queueRef <- newSTRef (Seq.singleton start)
 
   let loop = do
         queue <- readSTRef queueRef
-        case queue of
-          [] -> return visited
-          currentLevel -> do
-            writeSTRef queueRef []
-            nextLevel <- foldM processNode [] currentLevel
-            if null nextLevel
-              then return visited
-              else do
-                writeSTRef queueRef nextLevel
+        case Seq.viewl queue of
+          Seq.EmptyL -> return visited
+          curr Seq.:< rest -> do
+            isVisited <- readArray visited curr
+            if isVisited
+              then do
+                writeSTRef queueRef rest
                 loop
-
-      processNode acc curr = do
-        isVisited <- readArray visited curr
-        if isVisited
-          then return acc
-          else do
-            writeArray visited curr True
-            let neighbors = filter (inRange bounds) (getNext curr)
-            return (neighbors ++ acc)
+              else do
+                writeArray visited curr True
+                let neighbors = filter (inRange bounds) (getNext curr)
+                    unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
+                    queue' = rest Seq.>< Seq.fromList unvisitedNeighbors
+                writeSTRef queueRef queue'
+                loop
   loop
 
--- BFS複数始点版（mutable）
+-- BFS複数始点版（mutable, Data.Sequence使用）
 bfsRunSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
 bfsRunSTUArray bounds getNext initNodes = runSTUArray $ do
   visited <- newArray bounds False
-  queueRef <- newSTRef initNodes
+  queueRef <- newSTRef (Seq.fromList initNodes)
 
   let loop = do
         queue <- readSTRef queueRef
-        case queue of
-          [] -> return visited
-          currentLevel -> do
-            writeSTRef queueRef []
-            nextLevel <- foldM processNode [] currentLevel
-            if null nextLevel
-              then return visited
-              else do
-                writeSTRef queueRef nextLevel
+        case Seq.viewl queue of
+          Seq.EmptyL -> return visited
+          curr Seq.:< rest -> do
+            isVisited <- readArray visited curr
+            if isVisited
+              then do
+                writeSTRef queueRef rest
                 loop
-
-      processNode acc curr = do
-        isVisited <- readArray visited curr
-        if isVisited
-          then return acc
-          else do
-            writeArray visited curr True
-            let neighbors = filter (inRange bounds) (getNext curr)
-            return (neighbors ++ acc)
+              else do
+                writeArray visited curr True
+                let neighbors = filter (inRange bounds) (getNext curr)
+                    unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
+                    queue' = rest Seq.>< Seq.fromList unvisitedNeighbors
+                writeSTRef queueRef queue'
+                loop
   loop
 
--- BFS最短経路単始点版（mutable）
+-- BFS最短経路単始点版（mutable, Data.Sequence使用）
 bfsShortestPathSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Int
 bfsShortestPathSTUArray bounds getNext start = runSTUArray $ do
   distance <- newArray bounds (-1)
-  queueRef <- newSTRef [start]
+  queueRef <- newSTRef (Seq.singleton start)
   writeArray distance start 0
 
   let loop = do
         queue <- readSTRef queueRef
-        case queue of
-          [] -> return distance
-          currentLevel -> do
-            writeSTRef queueRef []
-            nextLevel <- foldM processNode [] currentLevel
-            if null nextLevel
-              then return distance
-              else do
-                writeSTRef queueRef nextLevel
-                loop
-
-      processNode acc curr = do
-        currDist <- readArray distance curr
-        if currDist == -1
-          then return acc
-          else do
+        case Seq.viewl queue of
+          Seq.EmptyL -> return distance
+          curr Seq.:< rest -> do
+            currDist <- readArray distance curr
             let neighbors = filter (inRange bounds) (getNext curr)
-            foldM (checkNeighbor currDist) acc neighbors
-
-      checkNeighbor currDist acc neighbor = do
-        neighborDist <- readArray distance neighbor
-        if neighborDist == -1
-          then do
-            writeArray distance neighbor (currDist + 1)
-            return (neighbor : acc)
-          else return acc
+            newNeighbors <- filterM (\n -> do
+              d <- readArray distance n
+              if d == -1
+                then do
+                  writeArray distance n (currDist + 1)
+                  return True
+                else return False) neighbors
+            let queue' = rest Seq.>< Seq.fromList newNeighbors
+            writeSTRef queueRef queue'
+            loop
   loop
 
--- BFS最短経路複数始点版（mutable）
+-- BFS最短経路複数始点版（mutable, Data.Sequence使用）
 bfsMultiSourceShortestPath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Int
 bfsMultiSourceShortestPath bounds getNext starts = runSTUArray $ do
   distance <- newArray bounds (-1)
-  queueRef <- newSTRef starts
+  queueRef <- newSTRef (Seq.fromList starts)
 
   mapM_ (\start -> writeArray distance start 0) starts
 
   let loop = do
         queue <- readSTRef queueRef
-        case queue of
-          [] -> return distance
-          currentLevel -> do
-            writeSTRef queueRef []
-            nextLevel <- foldM processNode [] currentLevel
-            if null nextLevel
-              then return distance
-              else do
-                writeSTRef queueRef nextLevel
-                loop
-
-      processNode acc curr = do
-        currDist <- readArray distance curr
-        let neighbors = filter (inRange bounds) (getNext curr)
-        foldM (checkNeighbor currDist) acc neighbors
-
-      checkNeighbor currDist acc neighbor = do
-        neighborDist <- readArray distance neighbor
-        if neighborDist == -1
-          then do
-            writeArray distance neighbor (currDist + 1)
-            return (neighbor : acc)
-          else return acc
+        case Seq.viewl queue of
+          Seq.EmptyL -> return distance
+          curr Seq.:< rest -> do
+            currDist <- readArray distance curr
+            let neighbors = filter (inRange bounds) (getNext curr)
+            newNeighbors <- filterM (\n -> do
+              d <- readArray distance n
+              if d == -1
+                then do
+                  writeArray distance n (currDist + 1)
+                  return True
+                else return False) neighbors
+            let queue' = rest Seq.>< Seq.fromList newNeighbors
+            writeSTRef queueRef queue'
+            loop
   loop
 
 -- =============================================================================
@@ -199,21 +183,21 @@ bfsMultiSourceShortestPath bounds getNext starts = runSTUArray $ do
 -- =============================================================================
 
 -- DFS単始点版(immutable)
-dfsSingleSource :: forall a. (Ix a) => (a -> [a]) -> IS.IntSet -> a -> IS.IntSet
+dfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> a -> Set.Set a
 dfsSingleSource getNext visited start
-  | IS.member (fromEnum start) visited = visited
+  | Set.member start visited = visited
   | otherwise =
-      let visited' = IS.insert (fromEnum start) visited
+      let visited' = Set.insert start visited
           neighbors = getNext start
        in foldl' (dfsSingleSource getNext) visited' neighbors
 
 -- DFS複数始点版(immutable)
-dfs :: forall a. (Ix a) => (a -> [a]) -> IS.IntSet -> [a] -> IS.IntSet
+dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> [a] -> Set.Set a
 dfs getNext visited [] = visited
 dfs getNext visited (curr : rest)
-  | IS.member (fromEnum curr) visited = dfs getNext visited rest
+  | Set.member curr visited = dfs getNext visited rest
   | otherwise =
-      let visited' = IS.insert (fromEnum curr) visited
+      let visited' = Set.insert curr visited
           neighbors = getNext curr
        in dfs getNext visited' (neighbors ++ rest)
 
@@ -289,7 +273,7 @@ dfsRunSTUArrayWithPath bounds getNext initNodes = runSTUArray $ do
   loop
 
 -- =============================================================================
--- 連結成分関数（汎用化版）
+-- 連結成分関数（Data.Sequence版）
 -- =============================================================================
 
 -- 連結成分の個数（DFS版）
@@ -312,21 +296,21 @@ countComponentsDFS bounds getNext = runST $ do
 
   readSTRef count
 
--- 連結成分の個数（BFS版）
+-- 連結成分の個数（BFS版, Data.Sequence使用）
 countComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 countComponentsBFS bounds getNext = runST $ do
   visited <- newArray bounds False :: ST s (STUArray s a Bool)
   count <- newSTRef 0
 
   let bfs startV = do
-        queue <- newSTRef [startV]
+        queue <- newSTRef (Seq.singleton startV)
         writeArray visited startV True
 
         let loop = do
               q <- readSTRef queue
-              case q of
-                [] -> return ()
-                (v : rest) -> do
+              case Seq.viewl q of
+                Seq.EmptyL -> return ()
+                (v Seq.:< rest) -> do
                   writeSTRef queue rest
                   neighbors <-
                     filterM
@@ -336,7 +320,7 @@ countComponentsBFS bounds getNext = runST $ do
                       )
                       (filter (inRange bounds) (getNext v))
                   mapM_ (\u -> writeArray visited u True) neighbors
-                  modifySTRef' queue (++ neighbors)
+                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
                   loop
         loop
 
@@ -371,23 +355,23 @@ getComponentsDFS bounds getNext = runST $ do
 
   readSTRef components
 
--- 各成分の頂点リスト（BFS）
+-- 各成分の頂点リスト（BFS版, Data.Sequence使用）
 getComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
 getComponentsBFS bounds getNext = runST $ do
   visited <- newArray bounds False :: ST s (STUArray s a Bool)
   components <- newSTRef []
 
   let bfs startV = do
-        queue <- newSTRef [startV]
+        queue <- newSTRef (Seq.singleton startV)
         component <- newSTRef []
         writeArray visited startV True
         modifySTRef' component (startV :)
 
         let loop = do
               q <- readSTRef queue
-              case q of
-                [] -> return ()
-                (v : rest) -> do
+              case Seq.viewl q of
+                Seq.EmptyL -> return ()
+                v Seq.:< rest -> do
                   writeSTRef queue rest
                   neighbors <-
                     filterM
@@ -402,7 +386,7 @@ getComponentsBFS bounds getNext = runST $ do
                         modifySTRef' component (u :)
                     )
                     neighbors
-                  modifySTRef' queue (++ neighbors)
+                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
                   loop
 
         loop
@@ -573,7 +557,7 @@ countGridComponentsDFS grid targetChar getNext = runST $ do
 
   readSTRef count
 
--- グリッド版: 連結成分数(BFS) - 特定文字のみ対象
+-- グリッド版: 連結成分数(BFS, Data.Sequence使用) - 特定文字のみ対象
 countGridComponentsBFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
 countGridComponentsBFS grid targetChar getNext = runST $ do
   let bounds' = bounds grid
@@ -583,14 +567,14 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
   let targetPositions = [pos | pos <- range bounds', grid ! pos == targetChar]
 
   let bfs startV = do
-        queue <- newSTRef [startV]
+        queue <- newSTRef (Seq.singleton startV)
         writeArray visited startV True
 
         let loop = do
               q <- readSTRef queue
-              case q of
-                [] -> return ()
-                (v : rest) -> do
+              case Seq.viewl q of
+                Seq.EmptyL -> return ()
+                v Seq.:< rest -> do
                   writeSTRef queue rest
                   neighbors <-
                     filterM
@@ -600,7 +584,7 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
                       )
                       (getNext v)
                   mapM_ (\u -> writeArray visited u True) neighbors
-                  modifySTRef' queue (++ neighbors)
+                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
                   loop
         loop
 
@@ -618,14 +602,9 @@ printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elem
     ((_, w1), (_, w2)) = bounds grid
     w = w2 + 1 - w1
 
-mvChar :: Char -> (Int, Int) -> (Int, Int)
-mvChar 'L' (i, j) = (i, j - 1)
-mvChar 'R' (i, j) = (i, j + 1)
-mvChar 'U' (i, j) = (i - 1, j)
-mvChar 'D' (i, j) = (i + 1, j)
-mvChar _ pos = pos
+data LRUD = L | R | U | D deriving (Show, Eq, Ord, Ix, Enum)
 
-mvList@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)] :: [(Int, Int)]
+lrud@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
 -- グリッド島カウント例（getNext関数を動的に受け取る版）
 countGridIslands :: forall a. (Ix a) => UArray a Char -> (a -> [a]) -> Int
