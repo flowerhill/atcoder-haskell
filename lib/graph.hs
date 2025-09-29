@@ -5,11 +5,11 @@ import Control.Monad.ST
 import Data.Array
 import Data.Array.ST
 import Data.Array.Unboxed
-import qualified Data.Set as Set
 import Data.Ix
 import Data.List (foldl')
 import Data.STRef
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 
 -- =============================================================================
 -- グラフ構築関数（汎用化版）
@@ -94,9 +94,8 @@ bfsSingleSourceSTUArray bounds getNext start = runSTUArray $ do
               else do
                 writeArray visited curr True
                 let neighbors = filter (inRange bounds) (getNext curr)
-                    unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
-                    queue' = rest Seq.>< Seq.fromList unvisitedNeighbors
-                writeSTRef queueRef queue'
+                unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
+                writeSTRef queueRef $ rest Seq.>< Seq.fromList unvisitedNeighbors
                 loop
   loop
 
@@ -119,9 +118,8 @@ bfsRunSTUArray bounds getNext initNodes = runSTUArray $ do
               else do
                 writeArray visited curr True
                 let neighbors = filter (inRange bounds) (getNext curr)
-                    unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
-                    queue' = rest Seq.>< Seq.fromList unvisitedNeighbors
-                writeSTRef queueRef queue'
+                unvisitedNeighbors <- filterM (fmap not . readArray visited) neighbors
+                writeSTRef queueRef $ rest Seq.>< Seq.fromList unvisitedNeighbors
                 loop
   loop
 
@@ -139,15 +137,18 @@ bfsShortestPathSTUArray bounds getNext start = runSTUArray $ do
           curr Seq.:< rest -> do
             currDist <- readArray distance curr
             let neighbors = filter (inRange bounds) (getNext curr)
-            newNeighbors <- filterM (\n -> do
-              d <- readArray distance n
-              if d == -1
-                then do
-                  writeArray distance n (currDist + 1)
-                  return True
-                else return False) neighbors
-            let queue' = rest Seq.>< Seq.fromList newNeighbors
-            writeSTRef queueRef queue'
+            newNeighbors <-
+              filterM
+                ( \n -> do
+                    d <- readArray distance n
+                    if d == -1
+                      then do
+                        writeArray distance n (currDist + 1)
+                        return True
+                      else return False
+                )
+                neighbors
+            writeSTRef queueRef $ rest Seq.>< Seq.fromList newNeighbors
             loop
   loop
 
@@ -166,15 +167,18 @@ bfsMultiSourceShortestPath bounds getNext starts = runSTUArray $ do
           curr Seq.:< rest -> do
             currDist <- readArray distance curr
             let neighbors = filter (inRange bounds) (getNext curr)
-            newNeighbors <- filterM (\n -> do
-              d <- readArray distance n
-              if d == -1
-                then do
-                  writeArray distance n (currDist + 1)
-                  return True
-                else return False) neighbors
-            let queue' = rest Seq.>< Seq.fromList newNeighbors
-            writeSTRef queueRef queue'
+            newNeighbors <-
+              filterM
+                ( \n -> do
+                    d <- readArray distance n
+                    if d == -1
+                      then do
+                        writeArray distance n (currDist + 1)
+                        return True
+                      else return False
+                )
+                neighbors
+            writeSTRef queueRef $ rest Seq.>< Seq.fromList newNeighbors
             loop
   loop
 
@@ -320,7 +324,7 @@ countComponentsBFS bounds getNext = runST $ do
                       )
                       (filter (inRange bounds) (getNext v))
                   mapM_ (\u -> writeArray visited u True) neighbors
-                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
+                  modifySTRef' queue $ Seq.>< Seq.fromList neighbors
                   loop
         loop
 
@@ -386,7 +390,7 @@ getComponentsBFS bounds getNext = runST $ do
                         modifySTRef' component (u :)
                     )
                     neighbors
-                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
+                  modifySTRef' queue $ Seq.>< Seq.fromList neighbors
                   loop
 
         loop
@@ -584,7 +588,7 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
                       )
                       (getNext v)
                   mapM_ (\u -> writeArray visited u True) neighbors
-                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
+                  modifySTRef' queue $ Seq.>< Seq.fromList neighbors
                   loop
         loop
 
