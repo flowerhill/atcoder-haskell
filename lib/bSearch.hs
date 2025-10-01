@@ -6,7 +6,6 @@ import Data.Array.IO.Internals (IOArray (IOArray), IOUArray (IOUArray))
 import Data.Vector.Unboxed qualified as VU
 
 {-- 二分探索 --}
--- bisect naoyaさんからパクったやつ
 
 -- | 左が false / 右が true で境界を引く
 bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
@@ -14,15 +13,6 @@ bisect (ng, ok) f
   | abs (ok - ng) == 1 = (ng, ok)
   | f m = bisect (ng, m) f
   | otherwise = bisect (m, ok) f
-  where
-    m = (ok + ng) `div` 2
-
--- | 左が true / 右が false で境界を引く
-bisect2 :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect2 (ok, ng) f
-  | abs (ng - ok) == 1 = (ok, ng)
-  | f m = bisect2 (m, ng) f
-  | otherwise = bisect2 (ok, m) f
   where
     m = (ok + ng) `div` 2
 
@@ -213,15 +203,6 @@ lookupGER arr val = lb
 
 -- 二分探索 Vector.Unboxed版
 
--- | 左が true / 右が false で境界を引く
-bisect2 :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect2 (ok, ng) f
-  | abs (ng - ok) == 1 = (ok, ng)
-  | f m = bisect2 (m, ng) f
-  | otherwise = bisect2 (ok, m) f
-  where
-    m = (ok + ng) `div` 2
-
 -- | モナド版二分探索
 bisectM :: (Monad m, Integral a) => (a, a) -> (a -> m Bool) -> m (a, a)
 bisectM (ng, ok) f
@@ -234,7 +215,7 @@ bisectM (ng, ok) f
   where
     mid = (ok + ng) `div` 2
 
--- | Vector用の二分探索（内部使用）
+-- | Vector用 左が false / 右が true で境界を引く
 bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
 bisect (ng, ok) f
   | abs (ok - ng) == 1 = (ng, ok)
