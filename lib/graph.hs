@@ -94,7 +94,7 @@ bfsSingleSourceSTUArray bounds getNext start = runSTUArray $ do
               else do
                 writeArray visited curr True
                 let neighbors = filter (inRange bounds) (getNext curr)
-                unvisitedNeighbors <- filterM (\n -> fmap not (readArray visited n)) neighbors
+                unvisitedNeighbors <- filterM (fmap not . readArray visited) neighbors
                 writeSTRef queueRef $ rest Seq.>< Seq.fromList unvisitedNeighbors
                 loop
   loop
@@ -223,7 +223,7 @@ dfsSingleSourceSTUArray bounds getNext start = runSTUArray $ do
               else do
                 writeArray visited curr True
                 let neighbors = filter (inRange bounds) (getNext curr)
-                modifySTRef stackRef (neighbors ++)
+                modifySTRef' stackRef (neighbors ++)
                 loop
   loop
 
