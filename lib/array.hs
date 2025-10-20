@@ -30,7 +30,7 @@ safeRead arr idx =
 modifyArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
 modifyArray arr idx f = do
   v <- readArray arr idx
-  writeArray arr idx $ f
+  writeArray arr idx $ f v
 
 (!?) :: (Ix i, MArray a e m) => a i e -> i -> m (Maybe e)
 (!?) arr idx = do

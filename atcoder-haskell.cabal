@@ -1,4 +1,4 @@
-cabal-version:      2.4
+cabal-version:      3.8
 name:               atcoder-haskell
 version:            0.1.0.0
 
@@ -31,7 +31,7 @@ executable atcoder-haskell
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
-    build-depends:    base ^>=4.17.1.0,
+    build-depends:    base,
                       mtl,
                       bytestring,
                       vector,

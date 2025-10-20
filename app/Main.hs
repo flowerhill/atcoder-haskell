@@ -67,8 +67,6 @@ import Debug.Trace (traceShow)
 import GHC.IO (unsafePerformIO)
 import System.Environment (lookupEnv)
 
-{-# RULES "Force inline VAI.sort" VAI.sort = VAI.sortBy compare #-}
-
 main :: IO ()
 main = do
   return ()
