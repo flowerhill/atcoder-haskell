@@ -27,6 +27,7 @@ safeRead arr idx =
     else Nothing
 
 {-- MArray用 --}
+-- Haksell 9.8.4 移行の環境だと必要ない
 modifyArray :: (MArray a t m, Ix i) => a i t -> i -> (t -> t) -> m ()
 modifyArray arr idx f = do
   v <- readArray arr idx

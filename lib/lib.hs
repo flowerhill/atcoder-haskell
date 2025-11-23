@@ -330,6 +330,10 @@ iSqrt n
 countBy :: (Foldable t) => (e -> Bool) -> t e -> Int
 countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 
+-- ランレングス圧縮
+runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
+runLengthEncode = map (\xs -> (head xs, length xs)) . group
+
 {-- digits --}
 toBinary :: Int -> [Bool]
 toBinary = unfoldr f
