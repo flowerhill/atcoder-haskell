@@ -22,11 +22,12 @@ import Control.Monad
 import Control.Monad.ST
 import Control.Monad.State (MonadState (get), StateT (StateT, runStateT))
 import Data.Array (Array)
+import Data.Array.Base (STUArray)
 import Data.Array.IArray
 import Data.Array.IO
 import Data.Array.IO.Internals (IOArray (IOArray), IOUArray (IOUArray))
 import Data.Array.MArray
-import Data.Array.ST ()
+import Data.Array.ST (STArray)
 import Data.Array.ST.Safe (runSTUArray)
 import Data.Array.Unboxed (UArray)
 import Data.Bifoldable (Bifoldable (bifold))

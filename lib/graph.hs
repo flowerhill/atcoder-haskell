@@ -44,34 +44,34 @@ buildGW2 bounds edges = accumArray (flip (:)) [] bounds edges'
 -- =============================================================================
 
 -- BFS単始点版（immutable, Data.Sequence使用）
-bfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> a -> Set.Set a
-bfsSingleSource getNext start = go Set.empty (Seq.singleton start)
+bfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> a -> S.Set a
+bfsSingleSource getNext start = go S.empty (Seq.singleton start)
   where
     go visited queue = case Seq.viewl queue of
       Seq.EmptyL -> visited
       curr Seq.:< rest ->
-        if Set.member curr visited
+        if S.member curr visited
           then go visited rest
           else
-            let visited' = Set.insert curr visited
+            let visited' = S.insert curr visited
                 neighbors = getNext curr
-                newNodes = [n | n <- neighbors, not (Set.member n visited')]
+                newNodes = [n | n <- neighbors, not (S.member n visited')]
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
 -- BFS複数始点版（immutable, Data.Sequence使用）
-bfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> [a] -> Set.Set a
+bfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
 bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
   where
     go visited queue = case Seq.viewl queue of
       Seq.EmptyL -> visited
       curr Seq.:< rest ->
-        if Set.member curr visited
+        if S.member curr visited
           then go visited rest
           else
-            let visited' = Set.insert curr visited
+            let visited' = S.insert curr visited
                 neighbors = getNext curr
-                newNodes = [n | n <- neighbors, not (Set.member n visited')]
+                newNodes = [n | n <- neighbors, not (S.member n visited')]
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
@@ -187,21 +187,21 @@ bfsMultiSourceShortestPath bounds getNext starts = runSTUArray $ do
 -- =============================================================================
 
 -- DFS単始点版(immutable)
-dfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> a -> Set.Set a
+dfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> a -> S.Set a
 dfsSingleSource getNext visited start
-  | Set.member start visited = visited
+  | S.member start visited = visited
   | otherwise =
-      let visited' = Set.insert start visited
+      let visited' = S.insert start visited
           neighbors = getNext start
        in foldl' (dfsSingleSource getNext) visited' neighbors
 
 -- DFS複数始点版(immutable)
-dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> Set.Set a -> [a] -> Set.Set a
+dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
 dfs getNext visited [] = visited
 dfs getNext visited (curr : rest)
-  | Set.member curr visited = dfs getNext visited rest
+  | S.member curr visited = dfs getNext visited rest
   | otherwise =
-      let visited' = Set.insert curr visited
+      let visited' = S.insert curr visited
           neighbors = getNext curr
        in dfs getNext visited' (neighbors ++ rest)
 

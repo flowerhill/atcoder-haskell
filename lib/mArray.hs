@@ -23,11 +23,29 @@ updateArray2 arr ix x f = do
 {-# INLINE updateArray2 #-}
 
 {-- IOArray --}
-
+-- n: 抽出したい行番号
+-- w: 列の最大インデックス
 getRowAsArray :: Int -> Int -> IOUArray (Int, Int) Int -> IO (IOUArray Int Int)
 getRowAsArray n w arr = do
   -- 新しい一次元配列を作成
   newArr <- newArray (0, w) minBound :: IO (IOUArray Int Int)
+  -- 元の配列から値を読み取り、新しい配列に書き込む
+  mapM_
+    ( \col -> do
+        val <- readArray arr (n, col)
+        writeArray newArr col val
+    )
+    [0 .. w]
+  return newArr
+
+{-- STUArray --}
+-- ST版
+-- n: 抽出したい行番号
+-- w: 列の最大インデックス
+getRowAsArray :: (MArray a1 Int (ST s), Ix a2) => a2 -> Int -> a1 (a2, Int) Int -> ST s (STUArray s Int Int)
+getRowAsArray n w arr = do
+  -- 新しい一次元配列を作成
+  newArr <- newArray (0, w) minBound :: ST s (STUArray s Int Int)
   -- 元の配列から値を読み取り、新しい配列に書き込む
   mapM_
     ( \col -> do
