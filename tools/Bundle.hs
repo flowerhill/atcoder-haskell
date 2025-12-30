@@ -6,7 +6,7 @@ import Control.Monad (forM, forM_)
 import Data.Char (isAlphaNum, isLower)
 import Data.List (nub, nubBy, partition, sort, sortOn)
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -275,7 +275,7 @@ findDepsOnce funcName allModules processedFuncs =
 functionLevelBundle :: Map.Map String ModuleInfo -> Set.Set String -> [ModuleInfo] -> T.Text
 functionLevelBundle allModules usedFunctions srcInfos =
   let usedModules =
-        [ m | m <- Map.elems allModules, any (\fname -> Set.member fname usedFunctions) (Map.keys (declarations m))
+        [ m | m <- Map.elems allModules, any (`Set.member` usedFunctions) (Map.keys (declarations m))
         ]
       neededImports = collectImportsFromModules usedModules
 
@@ -291,7 +291,7 @@ functionLevelBundle allModules usedFunctions srcInfos =
         collectAllPragmas allModules
           ++ [""]
           ++ neededImports
-          ++ (if null neededImports then [] else [""])
+          ++ (["" | not (null neededImports)])
           ++ cleanedFunctions
 
 -- 連続する空行を1つにまとめる
@@ -308,7 +308,7 @@ emitUsedFunctions usedFunctions modInfo =
       usedDecls = Map.filterWithKey (\name _ -> Set.member name usedFunctions) allDecls
    in if Map.null usedDecls
         then []
-        else concatMap (\(_, lines') -> lines') (Map.toList usedDecls)
+        else concatMap snd (Map.toList usedDecls)
 
 collectAllPragmas :: Map.Map String ModuleInfo -> [T.Text]
 collectAllPragmas modules =
@@ -326,7 +326,7 @@ collectImportsFromModules modules =
       -- 同じモジュールが複数回importされていても1回だけ含める
       uniqueImports = nubBy (\(m1, a1) (m2, a2) -> m1 == m2 && a1 == a2) externalOnly
       -- qualified と non-qualified を分離してソート
-      (qualified, nonQualified) = partition (\(_, alias) -> alias /= Nothing) uniqueImports
+      (qualified, nonQualified) = partition (\(_, alias) -> isJust alias) uniqueImports
       sortedImports = sortOn fst nonQualified ++ sortOn fst qualified
    in map formatImport sortedImports
   where
@@ -338,7 +338,7 @@ collectExternalImports modules =
       internalModules = Map.keysSet modules
       externalOnly = filter (\(m, _) -> not (Set.member m internalModules)) allImports
       uniqueImports = nub $ sort externalOnly
-      (qualified, nonQualified) = partition (\(_, alias) -> alias /= Nothing) uniqueImports
+      (qualified, nonQualified) = partition (\(_, alias) -> isJust alias) uniqueImports
    in map formatImport (nonQualified ++ qualified)
   where
     formatImport (modName, Nothing) = T.pack $ "import " ++ modName
