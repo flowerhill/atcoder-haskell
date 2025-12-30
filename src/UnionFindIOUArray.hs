@@ -1,3 +1,5 @@
+module UnionFindIOUArray where
+
 import Control.Monad (foldM, replicateM, unless, when)
 import Control.Monad.ST ()
 import Data.Array.IO (IOUArray, MArray (newArray), readArray, writeArray)

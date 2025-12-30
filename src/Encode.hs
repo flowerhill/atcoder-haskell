@@ -1,3 +1,5 @@
+module Encode where
+
 import Data.List (group)
 
 -- エンコード: 文字列を圧縮する
@@ -26,21 +28,3 @@ decodeFromString s = decode $ parseEncoded s
             [] -> []
 
     isDigit c = c >= '0' && c <= '9'
-
--- テスト用の補助関数
-test :: String -> IO ()
-test input = do
-  putStrLn $ "Input: " ++ input
-  let encoded = encodeToString input
-  putStrLn $ "Encoded: " ++ encoded
-  let decoded = decodeFromString encoded
-  putStrLn $ "Decoded: " ++ decoded
-  putStrLn $ "Successful: " ++ show (input == decoded)
-  putStrLn ""
-
--- メイン関数（テスト実行用）
-main :: IO ()
-main = do
-  test "AABBBCCCC"
-  test "WWWWWWWWWWWWBWWWWWWWWWWWW"
-  test "HelloWorld"
