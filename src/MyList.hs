@@ -1,3 +1,8 @@
+module MyList where
+
+import Control.Monad.State (StateT (StateT, runStateT))
+import Data.List (find, findIndex)
+
 {--  リスト走査 --}
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
@@ -47,14 +52,14 @@ combinationsWithRepetition l r = go
     go k = [x : xs | x <- [l .. r], xs <- go (k - 1), x <= head (x : xs) || null xs]
 
 -- 指定した数だけ抽出して組み合わせる
-combinations :: Int -> [a] -> [[a]]
-combinations _ [] = []
-combinations n as@(_ : xs)
+combinationsN :: Int -> [a] -> [[a]]
+combinationsN _ [] = []
+combinationsN n as@(_ : xs)
   | n == 0 = [[]]
   | n == 1 = map pure as
   | n == l = pure as
   | n > l = []
-  | otherwise = run (l - 1) (n - 1) as $ combinations (n - 1) xs
+  | otherwise = run (l - 1) (n - 1) as $ combinationsN (n - 1) xs
   where
     l = length as
 

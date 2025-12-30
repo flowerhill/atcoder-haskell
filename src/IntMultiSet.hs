@@ -1,4 +1,10 @@
-{-- IntMultiSet --}
+{-# LANGUAGE TypeApplications #-}
+
+module IntMultiSet where
+
+import Data.Bool (bool)
+import qualified Data.IntMap as IM
+import Data.List
 
 data IntMultiSet = IntMultiSet
   { sizeMS :: !Int, -- 集合に含まれる値の個数 O(1)

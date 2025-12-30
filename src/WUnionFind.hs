@@ -1,3 +1,15 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
+
+module WUnionFind where
+
+import Control.Monad (when)
+import Data.Array (index)
+import Data.Array.Base (MArray (..), modifyArray, readArray, writeArray)
+import Data.Array.IO (IOUArray, Ix)
+import Data.Bool (bool)
+import Data.IORef (IORef, modifyIORef', newIORef)
+
 {-- 重み付き Union-Find --}
 -- ref: https://qiita.com/drken/items/cce6fc5c579051e64fab
 data WeightedUnionFind a v
@@ -30,7 +42,7 @@ rootWUF uf@(WeightedUnionFind parent _ weight _ rep) x = do
 
       -- 累積和
       w <- readArray weight p
-      updateArray (+) weight x w
+      modifyArray weight x (+ w)
 
       return r
 

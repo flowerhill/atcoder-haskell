@@ -26,6 +26,13 @@ test: build-quiet
 	@echo "Running tests in $(BUILD_TYPE) mode..."
 	oj test -c "cabal run"
 
+test-bundle: bundle
+	@echo "Running tests dist/submit.hs in $(BUILD_TYPE) mode..."
+	@oj test -c "runhaskell dist/submit.hs"
+
+unit-test:
+	cabal test
+
 test-debug:
 	@echo "Running tests in debug mode..."
 	$(MAKE) build-debug DEBUG=1
@@ -39,17 +46,30 @@ endif
 	$(MAKE) build-debug DEBUG=1
 	cabal run < test/sample-$(CASE).in
 
+test-all: test doctest
+	@echo "✓ All tests passed!"
+
 submit-oj: test
-	oj submit $(SOURCE) --language haskell
+	@oj submit dist/submit.hs --language haskell
 
 submit: test
-	acc submit -- $(SOURCE) --language haskell
+	@acc submit dist/submit.hs --language haskell
 
 deps:
 	cabal build --dependencies-only
 
 clean:
 	cabal clean
+	rm -rf dist/
+
+doctest:
+	cabal test doctest --test-show-details=direct
+
+bundle:
+	cabal run bundle
+
+verify-bundle: bundle
+	ghc -fno-code dist/submit.hs || (echo "Bundle has syntax errors!" && exit 1)
 
 show-debug-info:
 	@echo "DEBUG: $(DEBUG)"
