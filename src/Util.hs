@@ -6,87 +6,14 @@
 
 module Util where
 
-import qualified Control.Applicative
-import Control.Monad
-import Control.Monad.ST
-import Control.Monad.State
--- ord を追加
-
-import Data.Bool (bool) -- 追加
-import qualified Data.ByteString.Char8 as BC
-import Data.Char (GeneralCategory (Control), digitToInt, isSpace, ord, readLitChar)
-import qualified Data.Char as C
-import qualified Data.Graph as G
 import qualified Data.IntSet as IS
-import Data.Ix
 import qualified Data.List as L
-import Data.Maybe (catMaybes, fromJust, maybeToList)
-import qualified Data.Sequence as Seq
-import qualified Data.Set as S
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
-import Debug.Trace (traceShow, traceShowId)
+import Debug.Trace (traceShow)
 -- 追加
 import System.Environment (lookupEnv) -- 追加
 import System.IO.Unsafe (unsafePerformIO)
 
 {- Library -}
--- String
-getStrings :: IO [String]
-getStrings = map BC.unpack . BC.words <$> BC.getLine
-
--- Int
-getInts :: IO [Int]
-getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
-
-getPairInt :: IO (Int, Int)
-getPairInt = (\[a, b] -> (a, b)) <$> getInts
-
-charToDigit :: Char -> Int
-charToDigit c = ord c - ord '0'
-
-parseLineIntList :: BC.ByteString -> [Int]
-parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
-
-readIntPairIntLineV :: Int -> IO (V.Vector (Int, Int))
-readIntPairIntLineV n = V.fromList <$> replicateM n getPairInt -- readPairInt → getPairInt
-
-readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
-readIntPairIntLineVU n = VU.fromList <$> replicateM n getPairInt -- readPairInt → getPairInt
-
--- Double
-
-getDouble :: IO [Double]
-getDouble = map read . words . BC.unpack <$> BC.getLine
-
--- others
-
-fromListToTuple :: [Int] -> (Int, Int)
-fromListToTuple [a, b] = (a, b)
-
-readTuple :: String -> (String, Int)
-readTuple input = (str, read num :: Int)
-  where
-    [str, num] = words input
-
-withInTime :: Int -> Int -> Int -> Bool
-withInTime start end time -- end 引数を追加
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-
-withInTimeDiff :: Int -> Int -> Int -> Bool
-withInTimeDiff start diff time
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-  where
-    end = (start + diff) `mod` 24
-
-printYn :: Bool -> IO ()
-printYn f = putStrLn $ bool "No" "Yes" f
-
-printList :: (Show a) => [a] -> IO ()
-printList lst = putStrLn $ unwords $ map show lst
-
 trisect :: (Int, Int) -> (Int -> Int) -> (Int, Int)
 trisect (l, r) f
   | r - l <= 2 = (l, r)

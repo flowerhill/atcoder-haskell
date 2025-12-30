@@ -4,23 +4,23 @@ module Main where
 
 import Control.Monad (forM, forM_)
 import Data.Char (isAlphaNum, isLower)
-import Data.List (nub, sort)
+import Data.List (nub, nubBy, partition, sort, sortOn)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist, listDirectory)
 import System.Environment (getArgs)
 import System.FilePath (dropExtension, takeExtension, (</>))
 
 data ModuleInfo = ModuleInfo
   { moduleName :: String,
     moduleFilePath :: FilePath,
-    moduleImports :: [String],
+    moduleImports :: [(String, Maybe String)],
     modulePragmas :: [T.Text],
-    topLevelDecls :: Map.Map String [T.Text],
-    declDependencies :: Map.Map String (Set.Set String)
+    declarations :: Map.Map String [T.Text],
+    declDeps :: Map.Map String (Set.Set String)
   }
   deriving (Show)
 
@@ -29,47 +29,71 @@ main = do
   args <- getArgs
   let outputFile = case args of
         (file : _) -> file
-        [] -> "submit.hs"
+        [] -> "dist/Submit.hs"
 
-  putStrLn $ "Bundling to " ++ outputFile ++ " (auto-discovery mode)..."
+  createDirectoryIfMissing True "dist"
+  putStrLn $ "Bundling to " ++ outputFile ++ "..."
 
-  -- app/Main.hsを読み込み
   mainContent <- TIO.readFile "app/Main.hs"
   let mainInfo = parseModule "Main" "app/Main.hs" mainContent
 
-  -- srcディレクトリ配下の全.hsファイルを自動検出
+  putStrLn "\n=== Main module ==="
+  putStrLn $ "Declarations: " ++ show (Map.keys (declarations mainInfo))
+  case Map.lookup "main" (declarations mainInfo) of
+    Nothing -> putStrLn "ERROR: 'main' declaration not found!"
+    Just mainDecl -> do
+      putStrLn "\nmain declaration:"
+      mapM_ (putStrLn . ("  " ++) . T.unpack) mainDecl
+
   srcModules <- discoverModules "src"
+  putStrLn $ "Discovered " ++ show (length srcModules) ++ " modules:"
+  forM_ srcModules $ \(name, _) -> putStrLn $ "  - " ++ name
 
-  putStrLn $ "Discovered " ++ show (length srcModules) ++ " modules in src/:"
-  forM_ srcModules $ \(name, path) ->
-    putStrLn $ "  - " ++ name ++ " (" ++ path ++ ")"
-
-  -- 全モジュールを読み込み
   srcInfos <- forM srcModules $ \(name, path) -> do
     content <- TIO.readFile path
-    return $ parseModule name path content
+    let modInfo = parseModule name path content
+    putStrLn $ "\n  Module: " ++ name
+    putStrLn $ "    Declarations: " ++ show (Map.keys (declarations modInfo))
+    return modInfo
 
   let allModules =
         Map.fromList $
           ("Main", mainInfo) : [(moduleName m, m) | m <- srcInfos]
 
-  -- mainから使われている関数を解析
-  let usedFunctions = analyzeUsedFunctions allModules
+  -- 全モジュールの関数名を収集
+  let allFunctionNames = Set.unions [Map.keysSet (declarations m) | m <- Map.elems allModules]
+
+  -- 各モジュールの依存関係を全関数名で計算
+  let modulesWithDeps =
+        Map.map
+          ( \modInfo ->
+              let newDeps = Map.map (extractDepsGlobal allFunctionNames) (declarations modInfo)
+               in modInfo {declDeps = newDeps}
+          )
+          allModules
+
+  -- デバッグ: mainの依存関係を表示
+  case Map.lookup "Main" modulesWithDeps of
+    Nothing -> putStrLn "\nWarning: Main module not found"
+    Just mainMod -> case Map.lookup "main" (declDeps mainMod) of
+      Nothing -> putStrLn "\nWarning: 'main' declaration not found"
+      Just deps -> do
+        putStrLn $ "\nmain raw dependencies: " ++ show (Set.toList deps)
+
+  let usedFunctions = analyzeUsedFunctions "main" modulesWithDeps
 
   putStrLn $
-    "\nTotal declarations: "
-      ++ show (sum $ map (Map.size . topLevelDecls . snd) $ Map.toList allModules)
-  putStrLn $ "Used declarations: " ++ show (Set.size usedFunctions)
+    "\nTotal functions: "
+      ++ show (sum [Map.size (declarations m) | m <- Map.elems allModules])
+  putStrLn $ "Used functions: " ++ show (Set.size usedFunctions)
   putStrLn "\nIncluded functions:"
-  forM_ (Set.toList usedFunctions) $ \name ->
+  forM_ (take 20 $ Set.toList usedFunctions) $ \name ->
     putStrLn $ "  - " ++ name
 
-  -- バンドル
-  let bundled = bundleWithDeps allModules usedFunctions srcInfos
+  let bundled = functionLevelBundle modulesWithDeps usedFunctions srcInfos
   TIO.writeFile outputFile bundled
-  putStrLn "\n✓ Bundle complete!"
+  putStrLn "\n✓ Complete!"
 
--- | srcディレクトリ配下の全.hsファイルを再帰的に探索
 discoverModules :: FilePath -> IO [(String, FilePath)]
 discoverModules dir = do
   entries <- listDirectory dir
@@ -77,35 +101,19 @@ discoverModules dir = do
     let path = dir </> entry
     isFile <- doesFileExist path
     isDir <- doesDirectoryExist path
-
     if isFile && takeExtension path == ".hs"
-      then do
-        -- モジュール名を推測: src/Data/Graph.hs → Data.Graph
-        let modName = pathToModuleName dir path
-        return [(modName, path)]
+      then return [(pathToModuleName dir path, path)]
       else
         if isDir
           then discoverModules path
           else return []
-
   return $ concat results
 
--- | ファイルパスからモジュール名を生成
--- 例: src/Data/Graph.hs → Data.Graph
 pathToModuleName :: FilePath -> FilePath -> String
 pathToModuleName baseDir filePath =
-  let relative = drop (length baseDir + 1) filePath -- "Data/Graph.hs"
-      withoutExt = dropExtension relative -- "Data/Graph"
-      modName = map (\c -> if c == '/' then '.' else c) withoutExt
-   in modName
-
--- | LANGUAGEプラグマを抽出
-extractPragmas :: [T.Text] -> [T.Text]
-extractPragmas = mapMaybe extractPragma
-  where
-    extractPragma line
-      | "{-# LANGUAGE " `T.isPrefixOf` T.stripStart line = Just line
-      | otherwise = Nothing
+  let relative = drop (length baseDir + 1) filePath
+      withoutExt = dropExtension relative
+   in map (\c -> if c == '/' then '.' else c) withoutExt
 
 parseModule :: String -> FilePath -> T.Text -> ModuleInfo
 parseModule name path content =
@@ -113,145 +121,225 @@ parseModule name path content =
       pragmas = extractPragmas lines'
       imports = extractImports lines'
       decls = extractDeclarations lines'
-      deps = Map.map (extractDeps decls) decls
+      -- 依存関係は後でまとめて計算するため、空にしておく
+      deps = Map.empty
    in ModuleInfo name path imports pragmas decls deps
 
-extractImports :: [T.Text] -> [String]
+extractPragmas :: [T.Text] -> [T.Text]
+extractPragmas =
+  filter
+    ( \line ->
+        let s = T.stripStart line
+         in "{-# LANGUAGE " `T.isPrefixOf` s
+    )
+
+extractImports :: [T.Text] -> [(String, Maybe String)]
 extractImports = mapMaybe parseImport
   where
     parseImport line
       | "import " `T.isPrefixOf` T.stripStart line =
           let parts = T.words line
            in case parts of
-                ["import", "qualified", modName, "as", _] -> Just (T.unpack modName)
-                ["import", "qualified", modName] -> Just (T.unpack modName)
-                ["import", modName] -> Just (T.unpack modName)
-                ("import" : modName : _) -> Just (T.unpack modName)
+                ["import", "qualified", modName, "as", alias] ->
+                  Just (T.unpack modName, Just (T.unpack alias))
+                ["import", "qualified", modName] ->
+                  Just (T.unpack modName, Nothing)
+                ["import", modName] ->
+                  Just (T.unpack modName, Nothing)
+                ("import" : modName : _) ->
+                  Just (T.unpack modName, Nothing)
                 _ -> Nothing
       | otherwise = Nothing
 
 extractDeclarations :: [T.Text] -> Map.Map String [T.Text]
 extractDeclarations lines' =
-  let numbered = zip [0 ..] lines'
-      bodyStart = findBodyStart numbered
-      bodyLines = drop bodyStart numbered
-      grouped = groupDeclarations bodyLines
-   in Map.fromList $ map (\g -> (getDeclName g, map snd g)) grouped
+  let bodyLines = dropWhile isHeaderLine lines'
+      groups = splitIntoDeclarations bodyLines
+   in Map.fromList [(name, decl) | (name, decl) <- groups, not (null name)]
   where
-    findBodyStart [] = 0
-    findBodyStart ((i, line) : rest)
-      | shouldSkipLine line = findBodyStart rest
-      | otherwise = i
-    shouldSkipLine line =
+    isHeaderLine line =
       let s = T.stripStart line
-       in T.isPrefixOf "module " s
-            || T.isPrefixOf "import " s
-            || T.isPrefixOf "{-# " s
-            || T.null s
+       in T.null s
+            || T.isPrefixOf "module " s
+            || T.isPrefixOf "{-#" s
+            || T.isPrefixOf "import " s -- 全てのpragmaをスキップ
+            || T.isPrefixOf "--" s -- コメント行もスキップ
 
-groupDeclarations :: [(Int, T.Text)] -> [[(Int, T.Text)]]
-groupDeclarations [] = []
-groupDeclarations ((i, line) : rest)
-  | isTopLevel line =
-      let (group, remaining) = span (not . isTopLevel . snd) rest
-       in ((i, line) : group) : groupDeclarations remaining
-  | otherwise = groupDeclarations rest
+splitIntoDeclarations :: [T.Text] -> [(String, [T.Text])]
+splitIntoDeclarations lines' = go (dropWhile isEmpty lines')
   where
+    isEmpty line = T.null (T.strip line)
+
+    go [] = []
+    go (line : rest)
+      | isEmpty line = go rest
+      | isComment line = go rest
+      | isTopLevel line =
+          let name = extractName line
+              (declLines, remaining) = takeUntilNextDecl rest
+           in if null name
+                then go remaining
+                else (name, line : declLines) : go remaining
+      | otherwise = go rest
+
     isTopLevel line =
-      let s = T.stripStart line
-       in not (T.null s)
-            && not (T.isPrefixOf " " line)
-            && not (T.isPrefixOf "\t" line)
-            && not (T.isPrefixOf "--" s)
+      not (T.null line)
+        && not (T.isPrefixOf " " line)
+        && not (T.isPrefixOf "\t" line)
 
-getDeclName :: [(Int, T.Text)] -> String
-getDeclName [] = "unknown"
-getDeclName ((_, line) : _) =
-  let firstWord = T.takeWhile (\c -> isAlphaNum c || c == '_' || c == '\'') $ T.stripStart line
-   in T.unpack $ T.takeWhile (/= ':') firstWord
+    isComment line = "--" `T.isPrefixOf` T.stripStart line
+
+    takeUntilNextDecl [] = ([], [])
+    takeUntilNextDecl (line : rest)
+      | isEmpty line =
+          let (more, remaining) = takeUntilNextDecl rest
+           in (line : more, remaining)
+      | isTopLevel line = ([], line : rest)
+      | otherwise =
+          let (more, remaining) = takeUntilNextDecl rest
+           in (line : more, remaining)
+
+    extractName line =
+      let stripped = T.strip line
+          -- 型シグネチャかどうかチェック
+          hasTypeSign = T.isInfixOf "::" stripped
+          -- "::" の前または空白の前までを名前として取得
+          beforeTypeSign =
+            if hasTypeSign
+              then T.takeWhile (/= ':') stripped
+              else T.takeWhile (\c -> c /= ' ' && c /= '=') stripped
+          name = T.takeWhile (\c -> isAlphaNum c || c == '_' || c == '\'') beforeTypeSign
+       in T.unpack $ T.strip name
 
 extractDeps :: Map.Map String [T.Text] -> [T.Text] -> Set.Set String
 extractDeps allDecls lines' =
   let text = T.unlines lines'
       identifiers = extractIdentifiers text
-      localFuncs = Set.fromList $ Map.keys allDecls
-   in Set.intersection identifiers localFuncs
+      declNames = Map.keysSet allDecls
+      result = Set.intersection identifiers declNames
+   in result
+
+extractDepsGlobal :: Set.Set String -> [T.Text] -> Set.Set String
+extractDepsGlobal allFunctionNames lines' =
+  let text = T.unlines lines'
+      identifiers = extractIdentifiers text
+   in Set.intersection identifiers allFunctionNames
 
 extractIdentifiers :: T.Text -> Set.Set String
 extractIdentifiers text =
-  let words' = T.words text
-      identifiers = filter isValidIdentifier $ map T.unpack words'
+  -- 全ての単語を抽出（記号で分割）
+  let allTokens = T.split (\c -> not (isAlphaNum c || c == '_' || c == '\'')) text
+      -- 小文字で始まる識別子だけを抽出
+      identifiers = [T.unpack token | token <- allTokens, isValidIdent token]
    in Set.fromList identifiers
   where
-    isValidIdentifier [] = False
-    isValidIdentifier (c : rest) =
-      isLower c && all (\x -> isAlphaNum x || x == '_' || x == '\'') rest
+    isValidIdent t =
+      case T.uncons t of
+        Nothing -> False
+        Just (c, _) -> isLower c && T.length t > 0
 
-analyzeUsedFunctions :: Map.Map String ModuleInfo -> Set.Set String
-analyzeUsedFunctions modules = go Set.empty (Set.singleton "main")
+analyzeUsedFunctions :: String -> Map.Map String ModuleInfo -> Set.Set String
+analyzeUsedFunctions startFunc allModules =
+  go Set.empty (Set.singleton startFunc) Set.empty
   where
-    go visited toVisit
+    go visited toVisit processedFuncs
       | Set.null toVisit = visited
       | otherwise =
           let (current, rest) = Set.deleteFindMin toVisit
            in if Set.member current visited
-                then go visited rest
+                then go visited rest processedFuncs
                 else
                   let newVisited = Set.insert current visited
-                      deps = findDeps current modules
-                      newToVisit = Set.union rest (Set.difference deps visited)
-                   in go newVisited newToVisit
+                      -- 依存関係を取得（複数のモジュールに同名関数がある場合は最初の1つだけ）
+                      deps = case findDepsOnce current allModules processedFuncs of
+                        (Just newDeps, srcModule) ->
+                          let newProcessedFuncs = Set.insert (srcModule, current) processedFuncs
+                           in (newDeps, newProcessedFuncs)
+                        (Nothing, _) -> (Set.empty, processedFuncs)
+                      newToVisit = Set.union rest (Set.difference (fst deps) newVisited)
+                   in go newVisited newToVisit (snd deps)
 
-findDeps :: String -> Map.Map String ModuleInfo -> Set.Set String
-findDeps funcName modules =
-  let allDeps = mapMaybe (Map.lookup funcName . declDependencies) (Map.elems modules)
-   in case allDeps of (deps : _) -> deps; [] -> Set.empty
+-- 関数を最初に見つけたモジュールだけから取得
+findDepsOnce :: String -> Map.Map String ModuleInfo -> Set.Set (String, String) -> (Maybe (Set.Set String), String)
+findDepsOnce funcName allModules processedFuncs =
+  let candidates =
+        [ (Map.lookup funcName (declDeps info), moduleName info)
+          | info <- Map.elems allModules,
+            Map.member funcName (declarations info),
+            not (Set.member (moduleName info, funcName) processedFuncs)
+        ]
+   in case candidates of
+        ((Just deps, modName) : _) -> (Just deps, modName)
+        _ -> (Nothing, "")
 
-bundleWithDeps :: Map.Map String ModuleInfo -> Set.Set String -> [ModuleInfo] -> T.Text
-bundleWithDeps modules usedFunctions srcModules =
-  T.unlines $
-    collectAllPragmas modules
-      ++ [""]
-      ++ collectExternalImports modules
-      ++ [""]
-      ++
-      -- srcモジュールを順番に出力
-      concatMap
-        ( \info ->
-            let name = moduleName info
-             in if name /= "Main" -- Mainは最後
-                  then
-                    ["-- ====== " `T.append` T.pack name `T.append` " ======", ""]
-                      ++ emitUsedDecls name modules usedFunctions
-                      ++ [""]
-                  else []
-        )
-        srcModules
-      ++ ["-- ====== Main ======", ""]
-      ++ emitUsedDecls "Main" modules usedFunctions
+functionLevelBundle :: Map.Map String ModuleInfo -> Set.Set String -> [ModuleInfo] -> T.Text
+functionLevelBundle allModules usedFunctions srcInfos =
+  let usedModules =
+        [ m | m <- Map.elems allModules, any (\fname -> Set.member fname usedFunctions) (Map.keys (declarations m))
+        ]
+      neededImports = collectImportsFromModules usedModules
 
--- | 全モジュールからプラグマを収集（重複削除）
+      allFunctions =
+        concatMap (emitUsedFunctions usedFunctions) srcInfos
+          ++ case Map.lookup "Main" allModules of
+            Nothing -> []
+            Just mainInfo -> emitUsedFunctions usedFunctions mainInfo
+
+      -- 連続する空行を1つにまとめる
+      cleanedFunctions = removeExcessiveBlankLines allFunctions
+   in T.unlines $
+        collectAllPragmas allModules
+          ++ [""]
+          ++ neededImports
+          ++ (if null neededImports then [] else [""])
+          ++ cleanedFunctions
+
+-- 連続する空行を1つにまとめる
+removeExcessiveBlankLines :: [T.Text] -> [T.Text]
+removeExcessiveBlankLines [] = []
+removeExcessiveBlankLines [x] = [x]
+removeExcessiveBlankLines (x : y : rest)
+  | T.null (T.strip x) && T.null (T.strip y) = removeExcessiveBlankLines (x : rest)
+  | otherwise = x : removeExcessiveBlankLines (y : rest)
+
+emitUsedFunctions :: Set.Set String -> ModuleInfo -> [T.Text]
+emitUsedFunctions usedFunctions modInfo =
+  let allDecls = declarations modInfo
+      usedDecls = Map.filterWithKey (\name _ -> Set.member name usedFunctions) allDecls
+   in if Map.null usedDecls
+        then []
+        else concatMap (\(_, lines') -> lines') (Map.toList usedDecls)
+
 collectAllPragmas :: Map.Map String ModuleInfo -> [T.Text]
 collectAllPragmas modules =
-  let allPragmas = concatMap (modulePragmas . snd) (Map.toList modules)
-      uniquePragmas = nub $ sort allPragmas
-   in uniquePragmas
+  nub $ sort $ concatMap (modulePragmas . snd) (Map.toList modules)
 
--- | 全モジュールから外部importを抽出
-collectExternalImports :: Map.Map String ModuleInfo -> [T.Text]
+collectImportsFromModules :: [ModuleInfo] -> [T.Text]
+collectImportsFromModules modules =
+  let -- 全てのimportを収集（重複あり）
+      allImports = concatMap moduleImports modules
+      -- 内部モジュール名を収集
+      internalNames = Set.fromList [moduleName m | m <- modules]
+      -- 外部モジュールのみ
+      externalOnly = filter (\(modName, _) -> not (Set.member modName internalNames)) allImports
+      -- (モジュール名, エイリアス)のペアで重複削除
+      -- 同じモジュールが複数回importされていても1回だけ含める
+      uniqueImports = nubBy (\(m1, a1) (m2, a2) -> m1 == m2 && a1 == a2) externalOnly
+      -- qualified と non-qualified を分離してソート
+      (qualified, nonQualified) = partition (\(_, alias) -> alias /= Nothing) uniqueImports
+      sortedImports = sortOn fst nonQualified ++ sortOn fst qualified
+   in map formatImport sortedImports
+  where
+    formatImport (modName, Nothing) = T.pack $ "import " ++ modName
+    formatImport (modName, Just alias) = T.pack $ "import qualified " ++ modName ++ " as " ++ alias
+
 collectExternalImports modules =
   let allImports = concatMap (moduleImports . snd) (Map.toList modules)
-      -- 内部モジュール名のリスト
-      internalModules = Set.fromList $ Map.keys modules
-      -- 外部モジュールのみ
-      externalOnly = filter (\m -> not (Set.member m internalModules)) allImports
-   in map (T.pack . ("import " ++)) $ nub $ sort externalOnly
-
-emitUsedDecls :: String -> Map.Map String ModuleInfo -> Set.Set String -> [T.Text]
-emitUsedDecls modName modules usedFunctions =
-  case Map.lookup modName modules of
-    Nothing -> []
-    Just info ->
-      let allDecls = topLevelDecls info
-          usedDecls = Map.filterWithKey (\name _ -> Set.member name usedFunctions) allDecls
-       in concatMap (\(_, lines') -> lines' ++ [""]) $ Map.toList usedDecls
+      internalModules = Map.keysSet modules
+      externalOnly = filter (\(m, _) -> not (Set.member m internalModules)) allImports
+      uniqueImports = nub $ sort externalOnly
+      (qualified, nonQualified) = partition (\(_, alias) -> alias /= Nothing) uniqueImports
+   in map formatImport (nonQualified ++ qualified)
+  where
+    formatImport (modName, Nothing) = T.pack $ "import " ++ modName
+    formatImport (modName, Just alias) = T.pack $ "import qualified " ++ modName ++ " as " ++ alias

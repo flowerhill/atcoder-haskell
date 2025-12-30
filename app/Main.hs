@@ -17,11 +17,11 @@
 
 module Main where
 
-import Input (getInt, getInts)
+import Input (getInts)
 import Lib (solve)
 
 main :: IO ()
 main = do
-  n <- getInt
+  n <- readLn @Int
   xs <- getInts
   print $ solve n xs

@@ -67,31 +67,3 @@ getEdgeCount :: UnionFind -> Int -> IO Int
 getEdgeCount uf@(UnionFind _ size) u = do
   s <- getSize uf u
   return $ s * (s - 1) `quot` 2
-
-getInts :: IO [Int]
-getInts = unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
-
--- 使い方
-main :: IO ()
-main = do
-  [n, m] <- getInts
-  qs <- replicateM m getInts
-
-  uf <- newUF (1, n)
-  forM_ qs $ \[a, b] -> do
-    unit uf a b
-
-  count <-
-    foldM
-      ( \acc i -> do
-          rt <- getRoot uf i
-
-          if i == rt
-            then do
-              (+ acc) <$> getEdgeCount uf i
-            else return acc
-      )
-      0
-      [1 .. n]
-
-  print $ count - m
