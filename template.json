@@ -1,12 +1,16 @@
 {
   "task": {
-    "program": ["app/Main.hs"],
-    "submit": "app/Main.hs",
+    "program": ["dist/Submit.hs"],
+    "submit": "dist/Submit.hs",
     "static": [
       "atcoder-haskell.cabal",
       "cabal.project.local",
-      "lib",
+      "src",
+      "app",
+      "dist",
+      "spec",
       "Makefile",
+      "tools",
       ".gitignore",
       ".venv",
       ".envrc"
