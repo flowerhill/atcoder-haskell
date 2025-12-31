@@ -66,7 +66,7 @@ doctest:
 	cabal test doctest --test-show-details=direct
 
 bundle:
-	cabal run bundle
+	cabal run bundle --verbose=0 -- src app/Main.hs > dist/Submit.hs
 
 verify-bundle: bundle
 	ghc -fno-code dist/submit.hs || (echo "Bundle has syntax errors!" && exit 1)

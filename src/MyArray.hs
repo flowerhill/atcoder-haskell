@@ -1,4 +1,4 @@
-module Array where
+module MyArray where
 
 import Data.Array.IArray
 

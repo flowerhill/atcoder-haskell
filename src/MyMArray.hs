@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module MArray where
+module MyMArray where
 
 import Control.Monad.ST
 import Data.Array.IArray (IArray (bounds), elems, listArray)

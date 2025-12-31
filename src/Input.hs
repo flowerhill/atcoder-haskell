@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Input
   ( getInt,
@@ -14,41 +16,39 @@ where
 import Control.Monad (replicateM)
 import Data.Bool (bool)
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Char8 as BS
 import Data.Char (ord)
 import qualified Data.Char as C
 import qualified Data.List as L
-import Data.Maybe (fromJust)
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
 
 -- | 1行から整数を1つ読み込む
 getInt :: IO Int
-getInt = fst . fromJust . BS.readInt <$> BS.getLine
+getInt = readLn @Int
 
 -- | 1行から整数を複数読み込む（空白区切り）
 getInts :: IO [Int]
-getInts = map (fst . fromJust . BS.readInt) . BS.words <$> BS.getLine
+getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
 -- | 1行からInteger型を1つ読み込む
 getInteger :: IO Integer
-getInteger = fst . fromJust . BS.readInteger <$> BS.getLine
+getInteger = readLn @Integer
 
 -- | 1行からInteger型を複数読み込む（空白区切り）
 getIntegers :: IO [Integer]
-getIntegers = map (fst . fromJust . BS.readInteger) . BS.words <$> BS.getLine
+getIntegers = L.unfoldr (BC.readInteger . BC.dropWhile C.isSpace) <$> BC.getLine
 
 -- | 1行から文字列を複数読み込む（空白区切り）
-getWords :: IO [BS.ByteString]
-getWords = BS.words <$> BS.getLine
+getWords :: IO [BC.ByteString]
+getWords = BC.words <$> BC.getLine
 
 -- | n行のグリッド（整数）を読み込む
 getGrid :: Int -> IO [[Int]]
 getGrid n = replicateM n getInts
 
 -- | n行の文字列を読み込む
-getLines :: Int -> IO [BS.ByteString]
-getLines n = replicateM n BS.getLine
+getLines :: Int -> IO [BC.ByteString]
+getLines n = replicateM n BC.getLine
 
 getStrings :: IO [String]
 getStrings = map BC.unpack . BC.words <$> BC.getLine

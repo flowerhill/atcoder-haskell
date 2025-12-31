@@ -1,6 +1,5 @@
 module Lib (solve) where
 
-import Array
 import Data.Array (Ix)
 import Data.Array.Base
 

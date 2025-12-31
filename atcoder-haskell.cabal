@@ -28,8 +28,8 @@ library
     exposed-modules:  Lib
                       Input
                       Util
-                      Array
-                      MArray
+                      MyArray
+                      MyMArray
                       BSearchArray
                       BSearchVector
                       Encode
@@ -73,6 +73,7 @@ executable main
     ghc-options:      -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
     
     build-depends:    base,
+                      extra,
                       atcoder-haskell,
                       bytestring
 

@@ -17,6 +17,7 @@
 
 module Main where
 
+import Data.List.Extra
 import Input (getInts)
 import Lib (solve)
 
