@@ -2,16 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
-module Input
-  ( getInt,
-    getInts,
-    getInteger,
-    getIntegers,
-    getWords,
-    getGrid,
-    getLines,
-  )
-where
+module Input where
 
 import Control.Monad (replicateM)
 import Data.Bool (bool)

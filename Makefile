@@ -24,7 +24,7 @@ build-quiet:
 
 test: build-quiet
 	@echo "Running tests in $(BUILD_TYPE) mode..."
-	oj test -c "cabal run"
+	oj test -c "cabal run main"
 
 test-bundle: bundle
 	@echo "Running tests dist/submit.hs in $(BUILD_TYPE) mode..."
@@ -36,7 +36,7 @@ unit-test:
 test-debug:
 	@echo "Running tests in debug mode..."
 	$(MAKE) build-debug DEBUG=1
-	oj test -c "cabal run"
+	oj test -c "cabal run main"
 
 test-case:
 ifndef CASE
@@ -44,7 +44,7 @@ ifndef CASE
 endif
 	@echo "Running debug test with sample-$(CASE)..."
 	$(MAKE) build-debug DEBUG=1
-	cabal run < test/sample-$(CASE).in
+	cabal run main < test/sample-$(CASE).in
 
 test-all: test doctest
 	@echo "✓ All tests passed!"

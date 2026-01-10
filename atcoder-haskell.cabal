@@ -63,7 +63,7 @@ library
                       extra,
                       mutable-containers,
                       unordered-containers,
-                      --ac-library-hs,
+                      ac-library-hs,
 
 executable main
     main-is:          Main.hs
@@ -75,7 +75,10 @@ executable main
     build-depends:    base,
                       extra,
                       atcoder-haskell,
-                      bytestring
+                      bytestring,
+                      vector,
+                      containers,
+                      array,                      
 
 test-suite spec
     type:             exitcode-stdio-1.0
