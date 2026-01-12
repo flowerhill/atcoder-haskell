@@ -78,7 +78,7 @@ executable main
                       bytestring,
                       vector,
                       containers,
-                      array,                      
+                      array,
 
 test-suite spec
     type:             exitcode-stdio-1.0

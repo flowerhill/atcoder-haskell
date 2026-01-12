@@ -11,9 +11,7 @@
       "spec",
       "Makefile",
       "tools",
-      ".gitignore",
-      ".venv",
-      ".envrc"
+      ".gitignore"
     ],
     "testdir": "test"
   }
