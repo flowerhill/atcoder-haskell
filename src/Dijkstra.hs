@@ -31,13 +31,19 @@ type Dist = IM.IntMap Int
 
 type Bounds = (Int, Int)
 
+-- 有向グラフ用
 buildGraph :: Bounds -> [[Int]] -> Graph
 buildGraph (start, end) edges = accumArray (flip (:)) [] (start, end) edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges
 
--- immutable版 重いのであまり使えない
+-- 無向グラフ用
+buildGraph2 :: (Int, Int) -> [[Int]] -> Graph
+buildGraph2 bounds edges = accumArray (flip (:)) [] bounds edges'
+  where
+    edges' = concatMap (\[u, v, w] -> [(u, (v, w)), (v, (u, w))]) edges
 
+-- immutable版 重いのであまり使えない
 dijkstra :: Graph -> Vertex -> Int -> Dist
 dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
   where

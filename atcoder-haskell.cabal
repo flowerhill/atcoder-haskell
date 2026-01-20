@@ -38,6 +38,7 @@ library
                       IntMultiSet
                       Dijkstra
                       UnionFindIOUArray
+                      UnionFindSTUArray
                       WUnionFind
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -92,7 +93,8 @@ test-suite spec
 
     ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
 
-    build-depends:    QuickCheck,
+    build-depends:    containers,
+                      QuickCheck,
                       base,
                       atcoder-haskell,
                       hspec

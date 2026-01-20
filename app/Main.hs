@@ -17,7 +17,10 @@
 
 module Main where
 
+import Control.Monad.Extra
 import Data.List.Extra
+import Data.Vector qualified as V
+import Data.Vector.Unboxed qualified as VU
 import Input (getInts)
 import Lib (solve)
 
