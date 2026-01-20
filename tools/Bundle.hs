@@ -269,9 +269,10 @@ extractImportList l =
 
 -- | トポロジカルソート
 topSort :: M.Map String ModuleInfo -> [ModuleInfo]
-topSort mods = reverse $ go S.empty [] (M.keys mods)
+topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
   where
-    go _ acc [] = acc
+    go :: S.Set String -> [ModuleInfo] -> [String] -> (S.Set String, [ModuleInfo])
+    go visited acc [] = (visited, acc)
     go visited acc (name : rest)
       | name `S.member` visited = go visited acc rest
       | otherwise =
@@ -280,8 +281,8 @@ topSort mods = reverse $ go S.empty [] (M.keys mods)
             Just info ->
               let deps = filter (`M.member` mods) (map impName $ modImports info)
                   visited' = S.insert name visited
-                  acc' = go visited' acc deps
-               in go visited' (info : acc') rest
+                  (visited'', acc') = go visited' acc deps -- visitedも返す
+               in go visited'' (info : acc') rest -- 更新されたvisitedを使う
 
 -- | バンドル出力を生成
 generateBundle :: ModuleInfo -> [ModuleInfo] -> M.Map String ModuleInfo -> String
