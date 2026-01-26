@@ -21,6 +21,7 @@ import Control.Monad
 import Control.Monad.ST.Strict
 import Data.Array.IArray qualified as IA
 import Data.Array.ST.Safe
+import Data.Heap qualified as H
 import Data.IntSet qualified as IS
 import Data.List
 import Data.Set qualified as S

@@ -18,6 +18,7 @@
 module Main where
 
 import Control.Monad.Extra
+import Data.Heap qualified as H
 import Data.List.Extra
 import Data.Vector qualified as V
 import Data.Vector.Unboxed qualified as VU
