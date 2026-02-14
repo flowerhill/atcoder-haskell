@@ -279,6 +279,18 @@ toDigits n a = reverse $ L.unfoldr f a -- unfoldr → L.unfoldr
 fromDigits :: (Foldable t, Num a) => a -> t a -> a
 fromDigits n = L.foldl' (\acc b -> acc * n + b) 0 -- foldl' → L.foldl'
 
+{-- math --}
+nCr :: Int -> Int -> Int
+nCr n r
+  | r > n = 0
+  | r > n - r = nCr n (n - r)
+  | otherwise = product [n - r + 1 .. n] `div` product [1 .. r]
+
+nPr :: Int -> Int -> Int
+nPr n r
+  | r > n = 0
+  | otherwise = product [n - r + 1 .. n]
+
 {-- debug --}
 dbg :: (Show a) => a -> ()
 dbg = case getDebugEnv of

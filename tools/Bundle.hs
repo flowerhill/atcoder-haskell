@@ -34,8 +34,8 @@ data ModuleInfo = ModuleInfo
     modPath :: FilePath, -- ファイルパス
     modImports :: [ImportInfo], -- import文
     modExports :: Maybe String, -- export list (括弧内)
-    modPragmas :: [String], -- LANGUAGE プラグマ
-    modBody :: [String] -- モジュール本体 (import以降)
+    modPragmas :: [String], -- LANGUAGE プラグマ（先頭に集約するもの）
+    modBody :: [String] -- モジュール本体 (import以降、INLINEプラグマ含む)
   }
   deriving (Show)
 
@@ -132,17 +132,43 @@ parseModule name path content =
     }
   where
     lns = lines content
-    pragmas = extractPragmas lns
+    pragmas = extractTopLevelPragmas lns -- 先頭に集約するプラグマのみ
     (actualName, exports, afterModule) = extractModuleHeader lns
     (importLines, body) = extractImportsAndBody afterModule
     imports = map parseImport importLines
 
--- | プラグマを抽出（LANGUAGE, OPTIONS_GHC など全て）
-extractPragmas :: [String] -> [String]
-extractPragmas = filter isPragma
+-- | 先頭に集約すべきプラグマを抽出（LANGUAGE, OPTIONS_GHC のみ）
+extractTopLevelPragmas :: [String] -> [String]
+extractTopLevelPragmas = filter isTopLevelPragma
   where
-    isPragma l =
-      "{-#" `isPrefixOf` dropWhile isSpace l
+    isTopLevelPragma l =
+      let trimmed = dropWhile isSpace l
+       in isPragmaType "LANGUAGE" trimmed
+            || isPragmaType "OPTIONS_GHC" trimmed
+            || isPragmaType "OPTIONS" trimmed
+
+-- | 特定のプラグマタイプかどうか判定
+isPragmaType :: String -> String -> Bool
+isPragmaType pragmaName l =
+  "{-#" `isPrefixOf` l
+    && (pragmaName `isPrefixOf` dropWhile isSpace (drop 3 l))
+
+-- | 関数に紐づくプラグマかどうか（本体に残すべきもの）
+isFunctionPragma :: String -> Bool
+isFunctionPragma l =
+  let trimmed = dropWhile isSpace l
+   in "{-#" `isPrefixOf` trimmed
+        && ( isPragmaType "INLINE" trimmed
+               || isPragmaType "NOINLINE" trimmed
+               || isPragmaType "INLINABLE" trimmed
+               || isPragmaType "SPECIALIZE" trimmed
+               || isPragmaType "SPECIALISE" trimmed
+               || isPragmaType "RULES" trimmed
+               || isPragmaType "ANN" trimmed
+               || isPragmaType "UNPACK" trimmed
+               || isPragmaType "NOUNPACK" trimmed
+               || isPragmaType "COMPLETE" trimmed
+           )
 
 -- | モジュールヘッダーを抽出
 extractModuleHeader :: [String] -> (String, Maybe String, [String])
@@ -212,7 +238,7 @@ takeParens = go 0
       | c == ')' = if n == 1 then [c] else c : go (n - 1) cs
       | otherwise = c : go n cs
 
--- | import文と本体を分離
+-- | import文と本体を分離（INLINEプラグマは本体に含める）
 extractImportsAndBody :: [String] -> ([String], [String])
 extractImportsAndBody lns =
   let (imports, body) = partition isImportLine lns
@@ -221,10 +247,20 @@ extractImportsAndBody lns =
     isImportLine l =
       let trimmed = dropWhile isSpace l
        in "import " `isPrefixOf` trimmed
+    -- スキップするのはmodule行と先頭に集約するプラグマのみ
     isSkipLine l =
       let trimmed = dropWhile isSpace l
        in null trimmed
             || "module " `isPrefixOf` trimmed
+            || isTopLevelPragmaLine trimmed
+
+    -- 先頭に集約するプラグマ行かどうか
+    isTopLevelPragmaLine trimmed =
+      "{-#" `isPrefixOf` trimmed
+        && ( isPragmaType "LANGUAGE" trimmed
+               || isPragmaType "OPTIONS_GHC" trimmed
+               || isPragmaType "OPTIONS" trimmed
+           )
 
 -- | import文をパース
 parseImport :: String -> ImportInfo
@@ -271,7 +307,6 @@ extractImportList l =
 topSort :: M.Map String ModuleInfo -> [ModuleInfo]
 topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
   where
-    go :: S.Set String -> [ModuleInfo] -> [String] -> (S.Set String, [ModuleInfo])
     go visited acc [] = (visited, acc)
     go visited acc (name : rest)
       | name `S.member` visited = go visited acc rest
@@ -281,14 +316,14 @@ topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
             Just info ->
               let deps = filter (`M.member` mods) (map impName $ modImports info)
                   visited' = S.insert name visited
-                  (visited'', acc') = go visited' acc deps -- visitedも返す
-               in go visited'' (info : acc') rest -- 更新されたvisitedを使う
+                  (visited'', acc') = go visited' acc deps
+               in go visited'' (info : acc') rest
 
 -- | バンドル出力を生成
 generateBundle :: ModuleInfo -> [ModuleInfo] -> M.Map String ModuleInfo -> String
 generateBundle mainMod localMods localModMap =
   unlines $
-    -- 1. 全プラグマを集約
+    -- 1. 全プラグマを集約（LANGUAGEとOPTIONS_GHCのみ）
     nub (concatMap modPragmas (mainMod : localMods))
       ++ [""]
       ++
@@ -299,7 +334,7 @@ generateBundle mainMod localMods localModMap =
       externalImports
       ++ [""]
       ++
-      -- 4. ローカルモジュールの本体を展開
+      -- 4. ローカルモジュールの本体を展開（INLINEプラグマ含む）
       concatMap expandModule localMods
       ++
       -- 5. Main本体

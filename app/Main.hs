@@ -29,4 +29,4 @@ main :: IO ()
 main = do
   n <- readLn @Int
   xs <- getInts
-  print $ solve n xs
+  return ()
