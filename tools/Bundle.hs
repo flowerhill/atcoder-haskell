@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 -- | Haskell Module Bundler for AtCoder
 -- 複数のHaskellモジュールを1つのMain.hsにバンドルする
@@ -63,7 +64,7 @@ main = do
 bundle :: FilePath -> FilePath -> IO ()
 bundle srcDir mainFile = do
   mainContent <- readFileUtf8 mainFile
-  let mainInfo = parseModule "Main" mainFile mainContent
+  let mainInfo = parseModule mainFile mainContent
 
   localModules <- collectLocalModules srcDir mainInfo S.empty
   let sorted = topSort localModules
@@ -84,7 +85,7 @@ collectLocalModules srcDir modInfo visited = do
     if exists
       then do
         content <- readFileUtf8 path
-        let info = parseModule name path content
+        let info = parseModule path content
         subMods <- collectLocalModules srcDir info visited'
         return $ M.insert name info subMods
       else return M.empty
@@ -120,8 +121,8 @@ isStandardModule name = any (`isPrefixOf` name) standardPrefixes
       ]
 
 -- | モジュールをパース
-parseModule :: String -> FilePath -> String -> ModuleInfo
-parseModule name path content =
+parseModule :: FilePath -> String -> ModuleInfo
+parseModule path content =
   ModuleInfo
     { modName = actualName,
       modPath = path,
