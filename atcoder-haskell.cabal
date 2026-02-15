@@ -23,14 +23,27 @@ extra-source-files:
     CHANGELOG.md
     README.md
 
-executable atcoder-haskell
-    main-is:          Main.hs
-
-    -- Modules included in this executable, other than Main.
-    -- other-modules:
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
+-- ライブラリ（src/配下のモジュール）
+library
+    exposed-modules:  Lib
+                      Input
+                      Util
+                      MyArray
+                      MyMArray
+                      BSearchArray
+                      BSearchVector
+                      Encode
+                      Graph
+                      MyList
+                      IntMultiSet
+                      Dijkstra
+                      UnionFind
+                      WUnionFind
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    
+    ghc-options:      -O2 -Wall
+    
     build-depends:    base,
                       mtl,
                       bytestring,
@@ -50,6 +63,54 @@ executable atcoder-haskell
                       extra,
                       mutable-containers,
                       unordered-containers,
-                      --ac-library-hs,
+                      ac-library-hs,
+
+executable main
+    main-is:          Main.hs
     hs-source-dirs:   app
     default-language: Haskell2010
+    
+    ghc-options:      -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:    heaps,
+                      base,
+                      extra,
+                      atcoder-haskell,
+                      bytestring,
+                      vector,
+                      containers,
+                      array,
+
+test-suite spec
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    hs-source-dirs:   spec
+
+    other-modules:
+        LibSpec
+
+    default-language: Haskell2010
+
+    ghc-options:      -Wall -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:    containers,
+                      QuickCheck,
+                      base,
+                      atcoder-haskell,
+                      hspec
+
+    build-tool-depends:
+        hspec-discover:hspec-discover
+
+executable bundle
+    main-is:          Bundle.hs
+    hs-source-dirs:   tools
+    default-language: Haskell2010
+
+    ghc-options:      -O2 -Wall
+
+    build-depends:    base,
+                      text,
+                      filepath,
+                      directory,
+                      containers

@@ -1,15 +1,18 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeApplications #-}
+
+module Dijkstra where
 
 import Control.Monad
 import Data.Array
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.Char as C
+import Data.Array.Base (UArray, readArray, writeArray)
+import Data.Array.MArray (MArray (..))
+import Data.Array.ST (runSTUArray)
 import qualified Data.Heap as H
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List
-import Data.Maybe
 
 -- dijkstra用のgraph
 type Vertex = Int
@@ -28,13 +31,19 @@ type Dist = IM.IntMap Int
 
 type Bounds = (Int, Int)
 
+-- 有向グラフ用
 buildGraph :: Bounds -> [[Int]] -> Graph
 buildGraph (start, end) edges = accumArray (flip (:)) [] (start, end) edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges
 
--- immutable版 重いのであまり使えない
+-- 無向グラフ用
+buildGraph2 :: (Int, Int) -> [[Int]] -> Graph
+buildGraph2 bounds edges = accumArray (flip (:)) [] bounds edges'
+  where
+    edges' = concatMap (\[u, v, w] -> [(u, (v, w)), (v, (u, w))]) edges
 
+-- immutable版 重いのであまり使えない
 dijkstra :: Graph -> Vertex -> Int -> Dist
 dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
   where
@@ -64,7 +73,7 @@ dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
           | otherwise = q
 
 --  mutable版 基本はこっちを使う
-dijkstraST :: Ix v => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
+dijkstraST :: (Ix v) => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
 dijkstraST nextStates (lower, upper) v0s = runSTUArray $ do
   dist <- newArray (lower, upper) maxBound
 

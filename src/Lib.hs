@@ -15,18 +15,20 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module Main where
+module Lib (solve) where
 
-import Control.Monad.Extra
+import Control.Monad
+import Control.Monad.ST.Strict
+import Data.Array.IArray qualified as IA
+import Data.Array.ST.Safe
 import Data.Heap qualified as H
-import Data.List.Extra
+import Data.IntSet qualified as IS
+import Data.List
+import Data.Set qualified as S
 import Data.Vector qualified as V
 import Data.Vector.Unboxed qualified as VU
-import Input (getInts)
-import Lib (solve)
 
-main :: IO ()
-main = do
-  n <- readLn @Int
-  xs <- getInts
-  return ()
+-- | 問題固有のロジック
+-- この関数を書き換えて問題を解く
+solve :: Int -> [Int] -> Int
+solve n xs = sum xs

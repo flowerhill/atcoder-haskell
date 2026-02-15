@@ -1,2 +1,4 @@
+dist
 dist-newstyle
 venv
+.DS_Store

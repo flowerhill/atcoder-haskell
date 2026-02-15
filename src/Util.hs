@@ -4,79 +4,16 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
-import qualified Control.Applicative
-import Control.Monad
-import Control.Monad.ST
-import Control.Monad.State
-import qualified Data.ByteString.Char8 as BS
-import Data.Char (GeneralCategory (Control), digitToInt, isSpace, readLitChar)
-import qualified Data.Graph as G
-import qualified Data.IntSet as IntSet
-import Data.Ix
+module Util where
+
+import qualified Data.IntSet as IS
 import qualified Data.List as L
-import Data.Maybe (catMaybes, fromJust, maybeToList)
-import qualified Data.Sequence as Seq
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as VU
-import Debug.Trace (traceShow, traceShowId)
+import Debug.Trace (traceShow)
+-- 追加
+import System.Environment (lookupEnv) -- 追加
+import System.IO.Unsafe (unsafePerformIO)
 
 {- Library -}
--- String
-getStrings :: IO [String]
-getStrings = map BC.unpack . BC.words <$> BC.getLine
-
--- Int
-getInts :: IO [Int]
-getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
-
-getPairInt :: IO (Int, Int)
-getPairInt = (\[a, b] -> (a, b)) <$> getInts
-
-charToDigit :: Char -> Int
-charToDigit c = ord c - ord '0'
-
-parseLineIntList :: BC.ByteString -> [Int]
-parseLineIntList = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace)
-
-readIntPairIntLineV :: Int -> IO (V.Vector (Int, Int))
-readIntPairIntLineV n = V.fromList <$> replicateM n readPairInt
-
-readIntPairIntLineVU :: Int -> IO (VU.Vector (Int, Int))
-readIntPairIntLineVU n = VU.fromList <$> replicateM n readPairInt
-
--- Double
-
-getDouble :: IO [Double]
-getDouble = map read . words . BC.unpack <$> BC.getLine
-
--- others
-
-fromListToTuple :: [Int] -> (Int, Int)
-fromListToTuple [a, b] = (a, b)
-
-readTuple :: String -> (String, Int)
-readTuple input = (str, read num :: Int)
-  where
-    [str, num] = words input
-
-withInTime :: Int -> Int -> Int -> Bool
-withInTime start diff time
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-
-withInTimeDiff :: Int -> Int -> Int -> Bool
-withInTimeDiff start diff time
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-  where
-    end = (start + diff) `mod` 24
-
-printYn :: Bool -> IO ()
-printYn f = putStrLn $ bool "No" "Yes" f
-
-printList :: (Show a) => [a] -> IO ()
-printList lst = putStrLn $ unwords $ map show lst
-
 trisect :: (Int, Int) -> (Int -> Int) -> (Int, Int)
 trisect (l, r) f
   | r - l <= 2 = (l, r)
@@ -92,25 +29,12 @@ isPrime x = all (\n -> x `mod` n /= 0) lst
     xSqrt = floor (sqrt $ fromIntegral x :: Double) :: Int
     lst = [2 .. xSqrt]
 
-sieve :: Int -> IntSet.IntSet
-sieve n = go 2 (IntSet.fromList [2 .. n])
+sieve :: Int -> IS.IntSet
+sieve n = go 2 (IS.fromList [2 .. n])
   where
     go p s
       | p * p > n = s
-      | otherwise = go (p + 1) (IntSet.difference s (IntSet.fromList [p * p, p * p + p .. n]))
-
--- 整数の平方根を求める関数（ニュートン法）
--- 精度の問題でこちらを使った方が良い
-iSqrt :: Integer -> Integer
-iSqrt n
-  | n < 0 = error "invalid parameter: cannot use negative number."
-  | n == 0 = 0
-  | otherwise = go (n `div` 2)
-  where
-    go x
-      | x * x <= n && (x + 1) * (x + 1) > n = x
-      | x * x > n = go ((x + n `div` x) `div` 2)
-      | otherwise = go (x + 1)
+      | otherwise = go (p + 1) (IS.difference s (IS.fromList [p * p, p * p + p .. n]))
 
 isCube :: Int -> Bool
 isCube n = cubeRoot ^ 3 == n
@@ -175,7 +99,7 @@ mulMod x y = (x * y) `mod` modulus
 {-# INLINE mulMod #-}
 
 sumMod :: [Int] -> Int
-sumMod = foldl' addMod 0
+sumMod = L.foldl' addMod 0 -- foldl' → L.foldl'
 {-# INLINE sumMod #-}
 
 divMod2 :: Int -> Int -> Int
@@ -183,7 +107,7 @@ divMod2 x y = x `mulMod` powMod y (modulus - 2)
 {-# INLINE divMod2 #-}
 
 productMod :: [Int] -> Int
-productMod = foldl' mulMod 1
+productMod = L.foldl' mulMod 1 -- foldl' → L.foldl'
 {-# INLINE productMod #-}
 
 -- 繰り返し二乗法を使っている
@@ -242,11 +166,11 @@ invIntMod (IntMod a) = IntMod (invMod a)
 
 -- 出現回数
 countSubstring :: String -> String -> Int
-countSubstring sub str = length $ filter (isPrefixOf sub) $ tails str
+countSubstring sub str = length $ filter (L.isPrefixOf sub) $ L.tails str -- isPrefixOf → L.isPrefixOf, tails → L.tails
 
 -- 出現場所
 findSubstringIndices :: String -> String -> [Int]
-findSubstringIndices sub str = [i | (i, s) <- zip [0 ..] (tails str), sub `isPrefixOf` s]
+findSubstringIndices sub str = [i | (i, s) <- zip [0 ..] (L.tails str), sub `L.isPrefixOf` s] -- tails → L.tails, isPrefixOf → L.isPrefixOf
 
 substring :: Int -> Int -> String -> String
 substring start len str = take len (drop start str)
@@ -276,7 +200,7 @@ distinctPermutations vs = permute (length vs) (L.sort vs)
 
 -- 部分リストを抽出
 sublists :: [a] -> [[a]]
-sublists = filter (not . null) . concatMap inits . tails
+sublists = filter (not . null) . concatMap L.inits . L.tails -- inits → L.inits, tails → L.tails
 
 {-- リスト変更 --}
 -- インデックスと新しい値を指定して、リストの要素を更新する
@@ -328,15 +252,15 @@ iSqrt n
       | otherwise = go (x + 1)
 
 countBy :: (Foldable t) => (e -> Bool) -> t e -> Int
-countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
+countBy predicate = L.foldl' (\acc a -> if predicate a then acc + 1 else acc) 0 -- foldl' → L.foldl'
 
 -- ランレングス圧縮
 runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
-runLengthEncode = map (\xs -> (head xs, length xs)) . group
+runLengthEncode = map (\xs -> (head xs, length xs)) . L.group -- group → L.group
 
 {-- digits --}
 toBinary :: Int -> [Bool]
-toBinary = unfoldr f
+toBinary = L.unfoldr f -- unfoldr → L.unfoldr
   where
     f 0 = Nothing
     f i = Just (q == 1, p)
@@ -345,7 +269,7 @@ toBinary = unfoldr f
 
 toDigits :: (Integral a) => a -> a -> [a]
 toDigits _ 0 = [0]
-toDigits n a = reverse $ unfoldr f a
+toDigits n a = reverse $ L.unfoldr f a -- unfoldr → L.unfoldr
   where
     f 0 = Nothing
     f x = Just (q, p)
@@ -353,7 +277,19 @@ toDigits n a = reverse $ unfoldr f a
         (p, q) = divMod x n
 
 fromDigits :: (Foldable t, Num a) => a -> t a -> a
-fromDigits n = foldl' (\acc b -> acc * n + b) 0
+fromDigits n = L.foldl' (\acc b -> acc * n + b) 0 -- foldl' → L.foldl'
+
+{-- math --}
+nCr :: Int -> Int -> Int
+nCr n r
+  | r > n = 0
+  | r > n - r = nCr n (n - r)
+  | otherwise = product [n - r + 1 .. n] `div` product [1 .. r]
+
+nPr :: Int -> Int -> Int
+nPr n r
+  | r > n = 0
+  | otherwise = product [n - r + 1 .. n]
 
 {-- debug --}
 dbg :: (Show a) => a -> ()
