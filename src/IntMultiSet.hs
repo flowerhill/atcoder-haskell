@@ -3,7 +3,7 @@
 module IntMultiSet where
 
 import Data.Bool (bool)
-import qualified Data.IntMap as IM
+import qualified Data.IntMap.Strict as IM
 import Data.List
 
 data IntMultiSet = IntMultiSet

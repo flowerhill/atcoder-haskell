@@ -622,3 +622,90 @@ countGridIslands :: forall a. (Ix a) => UArray a Char -> (a -> [a]) -> Int
 countGridIslands grid getNext =
   let bnds' = bounds grid
    in countComponentsDFS bnds' getNext
+
+-- =============================================================================
+-- 強連結成分分解 (SCC) — Kosaraju のアルゴリズム
+-- =============================================================================
+
+-- | 隣接関数版: 強連結成分を求める
+--
+-- Kosaraju のアルゴリズム:
+--   1. 元のグラフで DFS し、帰りがけ順を記録
+--   2. 逆辺グラフ上で、帰りがけ順の逆順に DFS → 各連結成分が SCC
+sccFromAdj :: (Int, Int) -> (Int -> [Int]) -> [[Int]]
+sccFromAdj bnds getNext = runST do
+  let (lo, hi) = bnds
+
+  -- Step 1: 元グラフで DFS、帰りがけ順を求める
+  visited1 <- newArray bnds False :: ST s (STUArray s Int Bool)
+  orderRef <- newSTRef ([] :: [Int])
+
+  let dfs1 v = do
+        seen <- readArray visited1 v
+        unless seen do
+          writeArray visited1 v True
+          forM_ (getNext v) $ \u ->
+            when (u >= lo && u <= hi) (dfs1 u)
+          modifySTRef' orderRef (v :)
+
+  forM_ (range bnds) dfs1
+
+  -- 逆辺グラフを構築
+  let revAdj :: Array Int [Int]
+      revAdj =
+        accumArray
+          (flip (:))
+          []
+          bnds
+          [(u, v) | v <- range bnds, u <- getNext v, u >= lo && u <= hi]
+
+  -- Step 2: 帰りがけ順の逆順（= orderRef そのまま）で逆辺グラフを DFS
+  visited2 <- newArray bnds False :: ST s (STUArray s Int Bool)
+  compsRef <- newSTRef ([] :: [[Int]])
+  order <- readSTRef orderRef
+
+  let dfs2 v compRef = do
+        seen <- readArray visited2 v
+        unless seen do
+          writeArray visited2 v True
+          modifySTRef' compRef (v :)
+          forM_ (revAdj ! v) (`dfs2` compRef)
+
+  forM_ order $ \v -> do
+    seen <- readArray visited2 v
+    unless seen do
+      compRef <- newSTRef []
+      dfs2 v compRef
+      comp <- readSTRef compRef
+      modifySTRef' compsRef (comp :)
+
+  readSTRef compsRef
+
+-- | 隣接関数版: 各 SCC のサイズ
+sccSizesFromAdj :: (Int, Int) -> (Int -> [Int]) -> [Int]
+sccSizesFromAdj bnds getNext = map length (sccFromAdj bnds getNext)
+
+-- | 隣接関数版: 互いに到達可能なペア数
+-- サイズ k の SCC からは k*(k-1)/2 個のペアが作れる
+sccPairCountFromAdj :: (Int, Int) -> (Int -> [Int]) -> Integer
+sccPairCountFromAdj bnds getNext =
+  sum [k * (k - 1) `div` 2 | s <- sccFromAdj bnds getNext, let k = toInteger (length s)]
+
+-- | 辺リスト [[from, to]] から強連結成分を求める（頂点は 1..n）
+sccG :: Int -> [[Int]] -> [[Int]]
+sccG n edges = sccFromAdj (1, n) (adj !)
+  where
+    adj :: Array Int [Int]
+    adj = accumArray (flip (:)) [] (1, n) [(a, b) | [a, b] <- edges]
+
+-- | 辺リストから各 SCC のサイズ
+sccSizes :: Int -> [[Int]] -> [Int]
+sccSizes n edges = map length (sccG n edges)
+
+-- | 辺リストから互いに到達可能なペア数
+sccPairCount :: Int -> [[Int]] -> Integer
+sccPairCount n edges = sum [k * (k - 1) `div` 2 | s <- sccG n edges, let k = toInteger (length s)]
+
+-- | Array版: 有向グラフの強連結成分を求める
+sccArray :: Array Int [Int] -> [[Int]]
+sccArray graph = sccFromAdj (bounds graph) (graph !)
