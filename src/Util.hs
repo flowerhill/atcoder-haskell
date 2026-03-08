@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -6,11 +7,18 @@
 
 module Util where
 
+-- 追加
+-- 追加
+
+import Control.Monad (forM_, when)
+import Control.Monad.ST.Strict (ST, runST)
+import qualified Data.Array.IArray as IA
+import Data.Array.ST (STUArray, newArray, readArray, runSTUArray, writeArray)
+import Data.Array.Unboxed (UArray)
 import qualified Data.IntSet as IS
 import qualified Data.List as L
 import Debug.Trace (traceShow)
--- 追加
-import System.Environment (lookupEnv) -- 追加
+import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
 
 {- Library -}
@@ -35,6 +43,46 @@ sieve n = go 2 (IS.fromList [2 .. n])
     go p s
       | p * p > n = s
       | otherwise = go (p + 1) (IS.difference s (IS.fromList [p * p, p * p + p .. n]))
+
+-- | Sieve: count distinct prime factors for each number up to n
+-- O(N log log N)
+countPrimeFactors :: Int -> UArray Int Int
+countPrimeFactors n = runSTUArray $ do
+  arr <- newArray (0, n) 0 :: ST s (STUArray s Int Int)
+  forM_ [2 .. n] $ \i -> do
+    v <- readArray arr i
+    when (v == 0) $ do
+      forM_ [i, i + i .. n] $ \j -> do
+        cur <- readArray arr j
+        writeArray arr j $! (cur + 1)
+  return arr
+
+-- | Sieve: smallest prime factor for each number up to n
+-- O(N log log N)
+smallestPrimeFactor :: Int -> UArray Int Int
+smallestPrimeFactor n = runSTUArray $ do
+  arr <- newArray (0, n) 0 :: ST s (STUArray s Int Int)
+  forM_ [2 .. n] $ \i -> do
+    v <- readArray arr i
+    when (v == 0) $ do
+      forM_ [i, i + i .. n] $ \j -> do
+        cur <- readArray arr j
+        when (cur == 0) $ writeArray arr j i
+  return arr
+
+-- | Fast prime factorization using smallest prime factor table
+-- O(log n) per query after building the table
+primeFactors :: UArray Int Int -> Int -> [Int]
+primeFactors spf = go []
+  where
+    go !acc 1 = acc
+    go !acc x =
+      let p = spf IA.! x
+          x' = divAll x p
+       in go (p : acc) x'
+    divAll x p
+      | x `mod` p == 0 = divAll (x `div` p) p
+      | otherwise = x
 
 isCube :: Int -> Bool
 isCube n = cubeRoot ^ 3 == n
