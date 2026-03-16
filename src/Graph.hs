@@ -397,7 +397,7 @@ getComponentsBFS bnds getNext = runST $ do
                         modifySTRef' component (u :)
                     )
                     neighbors
-                  modifySTRef' queue $ (Seq.>< Seq.fromList neighbors)
+                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
                   loop
 
         loop
@@ -595,7 +595,7 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
                       )
                       (getNext v)
                   mapM_ (\u -> writeArray visited u True) neighbors
-                  modifySTRef' queue $ (Seq.>< Seq.fromList neighbors)
+                  modifySTRef' queue (Seq.>< Seq.fromList neighbors)
                   loop
         loop
 
@@ -709,3 +709,49 @@ sccPairCount n edges = sum [k * (k - 1) `div` 2 | s <- sccG n edges, let k = toI
 -- | Array版: 有向グラフの強連結成分を求める
 sccArray :: Array Int [Int] -> [[Int]]
 sccArray graph = sccFromAdj (bounds graph) (graph !)
+
+-- =============================================================================
+-- 木DP系関数
+-- =============================================================================
+
+-- | 根付き木の各頂点の部分木サイズを求める（隣接関数版）
+--
+-- 使用例:
+--   let graph = buildG2 (1, n) edges
+--       sz = subtreeSizes (1, n) (graph !) 1
+--   sz ! v == 頂点vを根とする部分木の頂点数
+subtreeSizes :: (Int, Int) -> (Int -> [Int]) -> Int -> UArray Int Int
+subtreeSizes bnds getNext root = runSTUArray do
+  sz <- newArray bnds 1 :: ST s (STUArray s Int Int)
+  visited <- newArray bnds False :: ST s (STUArray s Int Bool)
+  orderRef <- newSTRef ([] :: [(Int, Int)])
+  stackRef <- newSTRef [(root, -1 :: Int)]
+
+  -- DFSで訪問順を記録
+  let loop = do
+        stack <- readSTRef stackRef
+        case stack of
+          [] -> return ()
+          ((v, p) : rest) -> do
+            writeSTRef stackRef rest
+            vis <- readArray visited v
+            unless vis do
+              writeArray visited v True
+              modifySTRef' orderRef ((v, p) :)
+              forM_ (getNext v) $ \c ->
+                when (c /= p) $ modifySTRef' stackRef ((c, v) :)
+            loop
+  loop
+
+  -- 訪問順の逆順（＝帰りがけ順）で部分木サイズを集計
+  order <- readSTRef orderRef
+  forM_ order $ \(v, p) ->
+    when (p /= -1) do
+      sv <- readArray sz v
+      modifyArray' sz p (+ sv)
+
+  return sz
+
+-- | 根付き木の各頂点の部分木サイズを求める（Array版）
+subtreeSizesArray :: Array Int [Int] -> Int -> UArray Int Int
+subtreeSizesArray graph = subtreeSizes (bounds graph) (graph !)

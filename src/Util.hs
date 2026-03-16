@@ -248,7 +248,7 @@ distinctPermutations vs = permute (length vs) (L.sort vs)
 
 -- 部分リストを抽出
 sublists :: [a] -> [[a]]
-sublists = filter (not . null) . concatMap L.inits . L.tails -- inits → L.inits, tails → L.tails
+sublists = concatMap (filter (not . null) . L.inits) . L.tails -- inits → L.inits, tails → L.tails
 
 {-- リスト変更 --}
 -- インデックスと新しい値を指定して、リストの要素を更新する
