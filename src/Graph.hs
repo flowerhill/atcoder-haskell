@@ -189,6 +189,44 @@ bfsMultiSourceShortestPath bnds getNext starts = runSTUArray $ do
             loop
   loop
 
+-- | 0-1 BFS
+--
+-- 辺の重みが 0 か 1 のみのグラフに特化。
+-- コスト0は先頭、コスト1は末尾に追加して距離順を維持する。
+-- 計算量: O(V + E)
+--
+-- 使用例:
+--   let dist = bfs01ST nextStates (0, maxState) [start]
+--   where nextStates v = [(u, 0_or_1), ...]
+bfs01ST :: forall a. (Ix a) => (a -> [(a, Int)]) -> (a, a) -> [a] -> UArray a Int
+bfs01ST nextStates (lower, upper) v0s = runSTUArray $ do
+  dist <- newArray (lower, upper) maxBound
+  dequeRef <- newSTRef Seq.empty
+
+  forM_ v0s $ \v -> do
+    writeArray dist v 0
+    modifySTRef' dequeRef (Seq.|> v)
+
+  let loop = do
+        deque <- readSTRef dequeRef
+        case Seq.viewl deque of
+          Seq.EmptyL -> return dist
+          curr Seq.:< rest -> do
+            writeSTRef dequeRef rest
+            currDist <- readArray dist curr
+
+            forM_ (nextStates curr) $ \(next, cost) -> do
+              nextDist <- readArray dist next
+              let newDist = currDist + cost
+              when (newDist < nextDist) do
+                writeArray dist next newDist
+                if cost == 0
+                  then modifySTRef' dequeRef (next Seq.<|) -- コスト0: 先頭に追加
+                  else modifySTRef' dequeRef (Seq.|> next) -- コスト1: 末尾に追加
+            loop
+
+  loop
+
 -- =============================================================================
 -- DFS系関数（汎用化版）
 -- =============================================================================
