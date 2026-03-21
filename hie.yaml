@@ -1,10 +1,10 @@
 cradle:
   cabal:
-    - path: "src"
+    - path: "./src"
       component: "lib:atcoder-haskell"
-    - path: "app"
+    - path: "./app/Main.hs"
       component: "exe:main"
-    - path: "spec"
+    - path: "./spec"
       component: "test:spec"
-    - path: "tools"
+    - path: "./tools"
       component: "exe:bundle"

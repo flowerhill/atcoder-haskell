@@ -26,9 +26,7 @@ test: build-quiet
 	@echo "Running tests in $(BUILD_TYPE) mode..."
 	oj test -c "cabal run main"
 
-test-bundle: bundle
-	@echo "Running tests dist/submit.hs in $(BUILD_TYPE) mode..."
-	@oj test -c "runhaskell dist/submit.hs"
+test-bundle: test bundle
 
 unit-test:
 	cabal test
