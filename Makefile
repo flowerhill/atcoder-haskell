@@ -58,7 +58,7 @@ deps:
 
 clean:
 	cabal clean
-	rm -rf dist/
+	rm -rf dist/Submit.hs
 
 doctest:
 	cabal test doctest --test-show-details=direct

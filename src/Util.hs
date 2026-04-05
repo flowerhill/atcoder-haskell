@@ -351,3 +351,14 @@ getDebugEnv = unsafePerformIO (lookupEnv "DEBUG")
 
 traceDbg :: (Show b) => b -> b
 traceDbg itm = traceShow itm itm
+
+-- | リストからちょうど j 個選んだときの合計値をすべて列挙する
+--   combSums [3,8] 1 = [3, 8]
+--   combSums [3,8] 2 = [11]
+--   combSums [7,5,11] 0 = [0]
+combSums :: [Int] -> Int -> [Int]
+combSums _ 0 = [0]
+combSums [] _ = []
+combSums (x : xs) j =
+  map (+ x) (combSums xs (j - 1)) -- x を選ぶ
+    ++ combSums xs j -- x を選ばない

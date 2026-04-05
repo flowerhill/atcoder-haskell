@@ -97,3 +97,11 @@ safeWriteArray arr idx val = do
       writeArray arr idx val
       return True
     else return False
+
+-- 安全な読み込み
+safeReadArray :: (Ix i, MArray a e m) => a i e -> i -> m (Maybe e)
+safeReadArray arr idx = do
+  bounds' <- getBounds arr
+  if inRange bounds' idx
+    then Just <$> readArray arr idx
+    else return Nothing
