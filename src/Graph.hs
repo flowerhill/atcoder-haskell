@@ -22,25 +22,39 @@ import qualified Data.Set as S
 -- グラフ構築関数（汎用化版）
 -- =============================================================================
 
--- 重みなしグラフ構築(有向グラフ)
+-- | 重みなしグラフ構築（有向グラフ）
+--
+-- >>> buildG (1,3) [[1,2],[2,3]] ! 1
+-- [2]
+-- >>> buildG (1,3) [[1,2],[2,3]] ! 3
+-- []
 buildG :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG bnds edges = accumArray (flip (:)) [] bnds edges'
   where
     edges' = concatMap (\[u, v] -> [(u, v)]) edges
 
--- 重みなしグラフ構築(無向グラフ)
+-- | 重みなしグラフ構築（無向グラフ）
+--
+-- >>> buildG2 (1,3) [[1,2],[2,3]] ! 2
+-- [3,1]
 buildG2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG2 bnds edges = accumArray (flip (:)) [] bnds edges'
   where
     edges' = concatMap (\[u, v] -> [(u, v), (v, u)]) edges
 
--- 重みつきグラフ構築(有向グラフ)
+-- | 重みつきグラフ構築（有向グラフ）
+--
+-- >>> buildGW (1,3) [[1,2,5],[2,3,3]] ! 1
+-- [(2,5)]
 buildGW :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW bnds edges = accumArray (flip (:)) [] bnds edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges
 
--- 重みつきグラフ構築(無向グラフ)
+-- | 重みつきグラフ構築（無向グラフ）
+--
+-- >>> buildGW2 (1,3) [[1,2,5],[2,3,3]] ! 2
+-- [(3,3),(1,5)]
 buildGW2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW2 bnds edges = accumArray (flip (:)) [] bnds edges'
   where
@@ -50,7 +64,11 @@ buildGW2 bnds edges = accumArray (flip (:)) [] bnds edges'
 -- BFS系関数（Data.Sequence版）
 -- =============================================================================
 
--- BFS単始点版（immutable, Data.Sequence使用）
+-- | BFS単始点版（immutable, Data.Sequence使用）
+--
+-- >>> import qualified Data.Set as S
+-- >>> S.toList $ bfsSingleSource (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1
+-- [1,2,3]
 bfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> a -> S.Set a
 bfsSingleSource getNext start = go S.empty (Seq.singleton start)
   where
@@ -66,7 +84,11 @@ bfsSingleSource getNext start = go S.empty (Seq.singleton start)
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
--- BFS複数始点版（immutable, Data.Sequence使用）
+-- | BFS複数始点版（immutable, Data.Sequence使用）
+--
+-- >>> import qualified Data.Set as S
+-- >>> S.toList $ bfs (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) S.empty [1,3]
+-- [1,2,3,4]
 bfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
 bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
   where
@@ -82,7 +104,13 @@ bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
--- BFS単始点版（mutable, Data.Sequence使用）
+-- | BFS単始点版（mutable, Data.Sequence使用）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> bfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 3
+-- True
+-- >>> bfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 4
+-- False
 bfsSingleSourceSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
 bfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
@@ -106,7 +134,13 @@ bfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
                 loop
   loop
 
--- BFS複数始点版（mutable, Data.Sequence使用）
+-- | BFS複数始点版（mutable, Data.Sequence使用）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> bfsRunSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) [1,3] ! 4
+-- True
+-- >>> bfsRunSTUArray (1,4) (\x -> []) [1] ! 2
+-- False
 bfsRunSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
 bfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
@@ -130,7 +164,13 @@ bfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
                 loop
   loop
 
--- BFS最短経路単始点版（mutable, Data.Sequence使用）
+-- | BFS最短経路単始点版（mutable, Data.Sequence使用）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> bfsShortestPathSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> [3]; 3 -> [4]; _ -> []) 1 ! 4
+-- 3
+-- >>> bfsShortestPathSTUArray (1,4) (\x -> []) 1 ! 4
+-- -1
 bfsShortestPathSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Int
 bfsShortestPathSTUArray bnds getNext start = runSTUArray $ do
   distance <- newArray bnds (-1)
@@ -159,7 +199,11 @@ bfsShortestPathSTUArray bnds getNext start = runSTUArray $ do
             loop
   loop
 
--- BFS最短経路複数始点版（mutable, Data.Sequence使用）
+-- | BFS最短経路複数始点版（mutable, Data.Sequence使用）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> bfsMultiSourceShortestPath (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
+-- 1
 bfsMultiSourceShortestPath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Int
 bfsMultiSourceShortestPath bnds getNext starts = runSTUArray $ do
   distance <- newArray bnds (-1)
@@ -231,7 +275,11 @@ bfs01ST nextStates (lower, upper) v0s = runSTUArray $ do
 -- DFS系関数（汎用化版）
 -- =============================================================================
 
--- DFS単始点版(immutable)
+-- | DFS単始点版（immutable）
+--
+-- >>> import qualified Data.Set as S
+-- >>> S.toList $ dfsSingleSource (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) S.empty 1
+-- [1,2,3]
 dfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> a -> S.Set a
 dfsSingleSource getNext visited start
   | S.member start visited = visited
@@ -240,7 +288,11 @@ dfsSingleSource getNext visited start
           neighbors = getNext start
        in foldl' (dfsSingleSource getNext) visited' neighbors
 
--- DFS複数始点版(immutable)
+-- | DFS複数始点版（immutable）
+--
+-- >>> import qualified Data.Set as S
+-- >>> S.toList $ dfs (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) S.empty [1,3]
+-- [1,2,3,4]
 dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
 dfs getNext visited [] = visited
 dfs getNext visited (curr : rest)
@@ -250,7 +302,13 @@ dfs getNext visited (curr : rest)
           neighbors = getNext curr
        in dfs getNext visited' (neighbors ++ rest)
 
--- DFS単始点版(mutable)
+-- | DFS単始点版（mutable）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> dfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) 1 ! 3
+-- True
+-- >>> dfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> []; _ -> []) 1 ! 4
+-- False
 dfsSingleSourceSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
 dfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
@@ -272,7 +330,13 @@ dfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
                 loop
   loop
 
--- 複数始点(mutable)
+-- | DFS複数始点版（mutable）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> dfsRunSTUArray (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
+-- True
+-- >>> dfsRunSTUArray (1,4) (\x -> []) [1] ! 2
+-- False
 dfsRunSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
 dfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
@@ -297,6 +361,12 @@ dfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
 -- 各ノードへの経路を返す（未訪問は空リスト）
 data PathNode a = PathNode a [a]
 
+-- | DFS複数始点版・経路付き（mutable）
+--
+-- >>> dfsRunSTUArrayWithPath (1,3) (\x -> case x of 1 -> [2,3]; _ -> []) [1] ! 2
+-- [1,2]
+-- >>> dfsRunSTUArrayWithPath (1,3) (\x -> []) [1] ! 3
+-- []
 dfsRunSTUArrayWithPath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> Array a [a]
 dfsRunSTUArrayWithPath bnds getNext initNodes = runSTArray do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -325,7 +395,12 @@ dfsRunSTUArrayWithPath bnds getNext initNodes = runSTArray do
 -- 連結成分関数（Data.Sequence版）
 -- =============================================================================
 
--- 連結成分の個数（DFS版）
+-- | 連結成分の個数（DFS版）
+--
+-- >>> countComponentsDFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
+-- 2
+-- >>> countComponentsDFS (1,3) (\x -> [])
+-- 3
 countComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 countComponentsDFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -345,7 +420,10 @@ countComponentsDFS bnds getNext = runST $ do
 
   readSTRef count
 
--- 連結成分の個数（BFS版, Data.Sequence使用）
+-- | 連結成分の個数（BFS版, Data.Sequence使用）
+--
+-- >>> countComponentsBFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
+-- 2
 countComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 countComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -381,7 +459,10 @@ countComponentsBFS bnds getNext = runST $ do
 
   readSTRef count
 
--- 各成分の頂点リスト（DFS）
+-- | 各連結成分の頂点リストを返す（DFS版）
+--
+-- >>> map length $ getComponentsDFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
+-- [2,2]
 getComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
 getComponentsDFS bnds getNext = runST do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -404,7 +485,10 @@ getComponentsDFS bnds getNext = runST do
 
   readSTRef components
 
--- 各成分の頂点リスト（BFS版, Data.Sequence使用）
+-- | 各連結成分の頂点リストを返す（BFS版）
+--
+-- >>> map length $ getComponentsBFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
+-- [2,2]
 getComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
 getComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -449,11 +533,17 @@ getComponentsBFS bnds getNext = runST $ do
 
   readSTRef components
 
--- 各成分のサイズ
+-- | 各連結成分のサイズリストを返す
+--
+-- >>> getComponentSizes (1,5) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4,5]; 4 -> [3]; 5 -> [3]; _ -> [])
+-- [3,2]
 getComponentSizes :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [Int]
 getComponentSizes bnds getNext = map length (getComponentsDFS bnds getNext)
 
--- 最大成分のサイズ
+-- | 最大連結成分のサイズを返す
+--
+-- >>> getLargestComponent (1,5) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4,5]; 4 -> [3]; 5 -> [3]; _ -> [])
+-- 3
 getLargestComponent :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 getLargestComponent bnds getNext =
   let sizes = getComponentSizes bnds getNext
@@ -463,7 +553,10 @@ getLargestComponent bnds getNext =
 -- 特殊関数（汎用化版）
 -- =============================================================================
 
--- 指定ノードの成分サイズ
+-- | 指定ノードが属する連結成分のサイズを返す
+--
+-- >>> getComponentSize (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) 1
+-- 2
 getComponentSize :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> Int
 getComponentSize bnds getNext v = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -482,7 +575,12 @@ getComponentSize bnds getNext v = runST $ do
       readSTRef size
     else return 0
 
--- 同じ成分かチェック
+-- | 2頂点が同じ連結成分に属するか判定する
+--
+-- >>> isConnected (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) 1 2
+-- True
+-- >>> isConnected (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) 1 3
+-- False
 isConnected :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> a -> Bool
 isConnected bnds getNext u v
   | not (inRange bnds u) || not (inRange bnds v) = False
@@ -506,21 +604,30 @@ isConnected bnds getNext u v
 -- Array版（便利関数）
 -- =============================================================================
 
--- Array版：連結成分数（DFS）
+-- | Array版：連結成分数（DFS）
+--
+-- >>> countComponentsArrayDFS (buildG2 (1,4) [[1,2],[3,4]])
+-- 2
 countComponentsArrayDFS :: forall a. (Ix a) => Array a [a] -> Int
 countComponentsArrayDFS graph =
   let bnds' = bounds graph
       getNext v = graph ! v
    in countComponentsDFS bnds' getNext
 
--- Array版：連結成分数（BFS）
+-- | Array版：連結成分数（BFS）
+--
+-- >>> countComponentsArrayBFS (buildG2 (1,4) [[1,2],[3,4]])
+-- 2
 countComponentsArrayBFS :: forall a. (Ix a) => Array a [a] -> Int
 countComponentsArrayBFS graph =
   let bnds' = bounds graph
       getNext v = graph ! v
    in countComponentsBFS bnds' getNext
 
--- Array版：連結成分リスト
+-- | Array版：連結成分リスト
+--
+-- >>> map length $ getComponentsArray (buildG2 (1,4) [[1,2],[3,4]])
+-- [2,2]
 getComponentsArray :: forall a. (Ix a) => Array a [a] -> [[a]]
 getComponentsArray graph =
   let bnds' = bounds graph
@@ -531,11 +638,20 @@ getComponentsArray graph =
 -- グリッド系（汎用化版）
 -- =============================================================================
 
--- gridの構築
+-- | グリッドの構築（行リストから UArray を作る）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> buildGrid ((0,0),(1,1)) ["ab","cd"] ! (0,1)
+-- 'b'
 buildGrid :: (IArray UArray e, Ix i, Foldable t) => (i, i) -> t [e] -> UArray i e
 buildGrid bnds lst = listArray @UArray bnds $ concat lst
 
--- グリッド上の隣接座標を取得する関数（4方向版）
+-- | グリッド上の隣接座標を取得する（4方向版）
+--
+-- >>> import Data.Array.Unboxed (listArray)
+-- >>> let g = listArray ((0,0),(2,2)) (replicate 9 '.') :: UArray (Int,Int) Char
+-- >>> getNextGrid4 g '#' (1,1)
+-- [(0,1),(2,1),(1,0),(1,2)]
 getNextGrid4 :: UArray (Int, Int) Char -> Char -> (Int, Int) -> [(Int, Int)]
 getNextGrid4 grid wallChar (r, c) =
   let bnds' = bounds grid
@@ -549,7 +665,12 @@ getNextGrid4 grid wallChar (r, c) =
         ]
    in validNeighbors
 
--- グリッド上の隣接座標を取得する関数（8方向版）
+-- | グリッド上の隣接座標を取得する（8方向版）
+--
+-- >>> import Data.Array.Unboxed (listArray)
+-- >>> let g = listArray ((0,0),(2,2)) (replicate 9 '.') :: UArray (Int,Int) Char
+-- >>> length (getNextGrid8 g '#' (1,1))
+-- 8
 getNextGrid8 :: UArray (Int, Int) Char -> Char -> (Int, Int) -> [(Int, Int)]
 getNextGrid8 grid wallChar (r, c) =
   let bnds' = bounds grid
@@ -570,7 +691,10 @@ getNextGrid8 grid wallChar (r, c) =
         ]
    in validNeighbors
 
--- 距離の2乗がちょうどMになる移動先を列挙
+-- | 距離の2乗がちょうど m になる移動先を列挙する（1≤座標≤n の範囲内）
+--
+-- >>> getNextMoves 5 2 (3,3)
+-- [(2,2),(2,4),(4,2),(4,4)]
 getNextMoves :: Int -> Int -> (Int, Int) -> [(Int, Int)]
 getNextMoves n m (r, c) =
   [ (nr, nc)
@@ -583,7 +707,12 @@ getNextMoves n m (r, c) =
       inRange (1, n) nc
   ]
 
--- グリッド版: 連結成分数(DFS) - 特定文字のみ対象
+-- | グリッド版: 特定文字の連結成分数（DFS）
+--
+-- >>> import Data.Array.Unboxed (listArray)
+-- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
+-- >>> countGridComponentsDFS g '.' (\_ -> [])
+-- 4
 countGridComponentsDFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
 countGridComponentsDFS grid targetChar getNext = runST $ do
   let bnds' = bounds grid
@@ -606,7 +735,12 @@ countGridComponentsDFS grid targetChar getNext = runST $ do
 
   readSTRef count
 
--- グリッド版: 連結成分数(BFS, Data.Sequence使用) - 特定文字のみ対象
+-- | グリッド版: 特定文字の連結成分数（BFS）
+--
+-- >>> import Data.Array.Unboxed (listArray)
+-- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
+-- >>> countGridComponentsBFS g '.' (\_ -> [])
+-- 4
 countGridComponentsBFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
 countGridComponentsBFS grid targetChar getNext = runST $ do
   let bnds' = bounds grid
@@ -655,7 +789,12 @@ data LRUD = L | R | U | D deriving (Show, Eq, Ord, Ix, Enum)
 
 lrud@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
--- グリッド島カウント例（getNext関数を動的に受け取る版）
+-- | グリッドの連結成分数（'.'の島の数を数える用途など）
+--
+-- >>> import Data.Array.Unboxed (listArray)
+-- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
+-- >>> countGridIslands g (\_ -> [])
+-- 8
 countGridIslands :: forall a. (Ix a) => UArray a Char -> (a -> [a]) -> Int
 countGridIslands grid getNext =
   let bnds' = bounds grid
@@ -665,11 +804,15 @@ countGridIslands grid getNext =
 -- 強連結成分分解 (SCC) — Kosaraju のアルゴリズム
 -- =============================================================================
 
--- | 隣接関数版: 強連結成分を求める
+-- | 隣接関数版: 強連結成分を求める（Kosaraju のアルゴリズム）
 --
--- Kosaraju のアルゴリズム:
---   1. 元のグラフで DFS し、帰りがけ順を記録
---   2. 逆辺グラフ上で、帰りがけ順の逆順に DFS → 各連結成分が SCC
+-- 1. 元のグラフで DFS し、帰りがけ順を記録
+-- 2. 逆辺グラフ上で、帰りがけ順の逆順に DFS → 各連結成分が SCC
+--
+-- >>> sccFromAdj (1,3) (\v -> case v of 1 -> [2]; 2 -> [3]; 3 -> [1]; _ -> [])
+-- [[2,3,1]]
+-- >>> length $ sccFromAdj (1,3) (\v -> case v of 1 -> [2]; _ -> [])
+-- 3
 sccFromAdj :: (Int, Int) -> (Int -> [Int]) -> [[Int]]
 sccFromAdj bnds getNext = runST do
   let (lo, hi) = bnds
@@ -720,16 +863,24 @@ sccFromAdj bnds getNext = runST do
   readSTRef compsRef
 
 -- | 隣接関数版: 各 SCC のサイズ
+--
+-- >>> sccSizesFromAdj (1,3) (\v -> case v of 1 -> [2]; 2 -> [3]; 3 -> [1]; _ -> [])
+-- [3]
 sccSizesFromAdj :: (Int, Int) -> (Int -> [Int]) -> [Int]
 sccSizesFromAdj bnds getNext = map length (sccFromAdj bnds getNext)
 
--- | 隣接関数版: 互いに到達可能なペア数
--- サイズ k の SCC からは k*(k-1)/2 個のペアが作れる
+-- | 隣接関数版: 互いに到達可能なペア数（サイズ k の SCC から k*(k-1)/2 個）
+--
+-- >>> sccPairCountFromAdj (1,3) (\v -> case v of 1 -> [2]; 2 -> [3]; 3 -> [1]; _ -> [])
+-- 3
 sccPairCountFromAdj :: (Int, Int) -> (Int -> [Int]) -> Integer
 sccPairCountFromAdj bnds getNext =
   sum [k * (k - 1) `div` 2 | s <- sccFromAdj bnds getNext, let k = toInteger (length s)]
 
 -- | 辺リスト [[from, to]] から強連結成分を求める（頂点は 1..n）
+--
+-- >>> sccG 3 [[1,2],[2,3],[3,1]]
+-- [[2,3,1]]
 sccG :: Int -> [[Int]] -> [[Int]]
 sccG n edges = sccFromAdj (1, n) (adj !)
   where
@@ -737,14 +888,23 @@ sccG n edges = sccFromAdj (1, n) (adj !)
     adj = accumArray (flip (:)) [] (1, n) [(a, b) | [a, b] <- edges]
 
 -- | 辺リストから各 SCC のサイズ
+--
+-- >>> sccSizes 3 [[1,2],[2,3],[3,1]]
+-- [3]
 sccSizes :: Int -> [[Int]] -> [Int]
 sccSizes n edges = map length (sccG n edges)
 
 -- | 辺リストから互いに到達可能なペア数
+--
+-- >>> sccPairCount 3 [[1,2],[2,3],[3,1]]
+-- 3
 sccPairCount :: Int -> [[Int]] -> Integer
 sccPairCount n edges = sum [k * (k - 1) `div` 2 | s <- sccG n edges, let k = toInteger (length s)]
 
 -- | Array版: 有向グラフの強連結成分を求める
+--
+-- >>> length $ sccArray (buildG (1,3) [[1,2],[2,3],[3,1]])
+-- 1
 sccArray :: Array Int [Int] -> [[Int]]
 sccArray graph = sccFromAdj (bounds graph) (graph !)
 
@@ -758,6 +918,13 @@ sccArray graph = sccFromAdj (bounds graph) (graph !)
 --   let graph = buildG2 (1, n) edges
 --       sz = subtreeSizes (1, n) (graph !) 1
 --   sz ! v == 頂点vを根とする部分木の頂点数
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> let adj v = case v of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []
+-- >>> subtreeSizes (1,3) adj 1 ! 1
+-- 3
+-- >>> subtreeSizes (1,3) adj 1 ! 2
+-- 1
 subtreeSizes :: (Int, Int) -> (Int -> [Int]) -> Int -> UArray Int Int
 subtreeSizes bnds getNext root = runSTUArray do
   sz <- newArray bnds 1 :: ST s (STUArray s Int Int)
@@ -791,5 +958,9 @@ subtreeSizes bnds getNext root = runSTUArray do
   return sz
 
 -- | 根付き木の各頂点の部分木サイズを求める（Array版）
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> subtreeSizesArray (buildG2 (1,3) [[1,2],[1,3]]) 1 ! 1
+-- 3
 subtreeSizesArray :: Array Int [Int] -> Int -> UArray Int Int
 subtreeSizesArray graph = subtreeSizes (bounds graph) (graph !)

@@ -31,19 +31,32 @@ type Dist = IM.IntMap Int
 
 type Bounds = (Int, Int)
 
--- 有向グラフ用
+-- | 有向重み付きグラフを構築する
+--
+-- >>> buildGraph (1,3) [[1,2,5],[2,3,3]] ! 1
+-- [(2,5)]
+-- >>> buildGraph (1,3) [[1,2,5],[2,3,3]] ! 3
+-- []
 buildGraph :: Bounds -> [[Int]] -> Graph
 buildGraph (start, end) edges = accumArray (flip (:)) [] (start, end) edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w))]) edges
 
--- 無向グラフ用
+-- | 無向重み付きグラフを構築する
+--
+-- >>> buildGraph2 (1,3) [[1,2,5],[2,3,3]] ! 2
+-- [(3,3),(1,5)]
 buildGraph2 :: (Int, Int) -> [[Int]] -> Graph
 buildGraph2 bounds edges = accumArray (flip (:)) [] bounds edges'
   where
     edges' = concatMap (\[u, v, w] -> [(u, (v, w)), (v, (u, w))]) edges
 
--- immutable版 重いのであまり使えない
+-- | Dijkstra（immutable版・重いため主に教育用）
+--
+-- >>> import qualified Data.IntMap.Strict as IM
+-- >>> let g = buildGraph (1,3) [[1,2,5],[2,3,3]]
+-- >>> IM.lookup 3 (dijkstra g 1 3)
+-- Just 8
 dijkstra :: Graph -> Vertex -> Int -> Dist
 dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
   where
@@ -72,7 +85,12 @@ dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
           | cost < dist IM.! v = H.insert (H.Entry cost v) q
           | otherwise = q
 
---  mutable版 基本はこっちを使う
+-- | Dijkstra（mutable ST版・推奨）
+--
+-- >>> import qualified Data.Array.IArray as IArr
+-- >>> let adj v = case v of 1 -> [(2,5),(3,10)]; 2 -> [(3,3)]; _ -> []
+-- >>> (IArr.!) (dijkstraST adj (1,3) [1]) 3
+-- 8
 dijkstraST :: (Ix v) => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
 dijkstraST nextStates (lower, upper) v0s = runSTUArray $ do
   dist <- newArray (lower, upper) maxBound

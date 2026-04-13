@@ -31,5 +31,10 @@ import Data.Vector.Unboxed qualified as VU
 
 -- | 問題固有のロジック
 -- この関数を書き換えて問題を解く
+--
+-- >>> solve 3 [1, 2, 3]
+-- 6
+-- >>> solve 0 []
+-- 0
 solve :: Int -> [Int] -> Int
 solve n xs = sum xs

@@ -16,18 +16,38 @@ data IntMultiSet = IntMultiSet
 instance Show IntMultiSet where
   show = show . toListMS
 
+-- | リストからマルチセットを構築する
+--
+-- >>> fromListMS [1,2,2,3]
+-- [1,2,2,3]
 fromListMS :: [Int] -> IntMultiSet
 fromListMS = foldl' (flip insertMS) emptyMS
 
+-- | マルチセットを昇順リストに変換する
+--
+-- >>> toListMS (fromListMS [3,1,2,2])
+-- [1,2,2,3]
 toListMS :: IntMultiSet -> [Int]
 toListMS IntMultiSet {mapMS = m} = concatMap @[] (\(k, v) -> replicate v k) (IM.toList m)
 
+-- | 空のマルチセット
+--
+-- >>> nullMS emptyMS
+-- True
 emptyMS :: IntMultiSet
 emptyMS = IntMultiSet 0 0 IM.empty
 
+-- | 1要素のマルチセットを作る
+--
+-- >>> toListMS (singletonMS 5)
+-- [5]
 singletonMS :: Int -> IntMultiSet
 singletonMS x = insertMS x emptyMS
 
+-- | 要素を1つ追加する
+--
+-- >>> toListMS (insertMS 2 (fromListMS [1,3]))
+-- [1,2,3]
 insertMS :: Int -> IntMultiSet -> IntMultiSet
 insertMS x (IntMultiSet size dSize m)
   | IM.member x m = IntMultiSet (size + 1) dSize m'
@@ -45,6 +65,12 @@ insertNMS n x (IntMultiSet size dSize m)
   where
     m' = IM.insertWith @Int (+) x n m
 
+-- | 要素を1つ削除する（存在しない場合は変更なし）
+--
+-- >>> toListMS (deleteMS 2 (fromListMS [1,2,2,3]))
+-- [1,2,3]
+-- >>> toListMS (deleteMS 5 (fromListMS [1,2,3]))
+-- [1,2,3]
 deleteMS :: Int -> IntMultiSet -> IntMultiSet
 deleteMS x s@(IntMultiSet size dSize m)
   | IM.member x m =
@@ -69,18 +95,44 @@ deleteNMS n x s@(IntMultiSet size dSize m)
             else IntMultiSet (size - remain) (dSize - 1) m'
   | otherwise = s
 
+-- | 最小値を1つ削除する
+--
+-- >>> toListMS (deleteMinMS (fromListMS [1,2,3]))
+-- [2,3]
 deleteMinMS :: IntMultiSet -> IntMultiSet
 deleteMinMS s = deleteMS (findMinMS s) s
 
+-- | 最大値を1つ削除する
+--
+-- >>> toListMS (deleteMaxMS (fromListMS [1,2,3]))
+-- [1,2]
 deleteMaxMS :: IntMultiSet -> IntMultiSet
 deleteMaxMS s = deleteMS (findMaxMS s) s
 
+-- | 最小値を取り出して残りのセットと返す
+--
+-- >>> fst (deleteFindMinMS (fromListMS [1,2,3]))
+-- 1
+-- >>> toListMS (snd (deleteFindMinMS (fromListMS [1,2,3])))
+-- [2,3]
 deleteFindMinMS :: IntMultiSet -> (Int, IntMultiSet)
 deleteFindMinMS s = (findMinMS s, deleteMinMS s)
 
+-- | 最大値を取り出して残りのセットと返す
+--
+-- >>> fst (deleteFindMaxMS (fromListMS [1,2,3]))
+-- 3
+-- >>> toListMS (snd (deleteFindMaxMS (fromListMS [1,2,3])))
+-- [1,2]
 deleteFindMaxMS :: IntMultiSet -> (Int, IntMultiSet)
 deleteFindMaxMS s = (findMaxMS s, deleteMaxMS s)
 
+-- | x以上の要素をすべて取り出し (値, 個数) リストと残りのセットを返す
+--
+-- >>> fst (deleteGEViewMS 3 (fromListMS [1,2,3,3,5]))
+-- [(5,1),(3,2)]
+-- >>> toListMS (snd (deleteGEViewMS 3 (fromListMS [1,2,3,3,5])))
+-- [1,2]
 deleteGEViewMS :: Int -> IntMultiSet -> ([(Int, Int)], IntMultiSet)
 deleteGEViewMS x s0 = loop s0 []
   where
@@ -91,50 +143,122 @@ deleteGEViewMS x s0 = loop s0 []
         loop s' ((v, cnt) : acc)
       Nothing -> (acc, s)
 
+-- | 2つのマルチセットをカスタム関数でマージする
+--
+-- >>> toListMS (unionWithMS max (fromListMS [1,2,2]) (fromListMS [2,2,3]))
+-- [1,2,2,3]
 unionWithMS :: (Int -> Int -> Int) -> IntMultiSet -> IntMultiSet -> IntMultiSet
 unionWithMS f (IntMultiSet _ _ a) (IntMultiSet _ _ b) = IntMultiSet (IM.foldl' (+) 0 ab) (IM.size ab) ab
   where
     ab = IM.unionWith f a b
 
+-- | 2つのマルチセットを加算でマージする
+--
+-- >>> toListMS (unionMS (fromListMS [1,2]) (fromListMS [2,3]))
+-- [1,2,2,3]
 unionMS :: IntMultiSet -> IntMultiSet -> IntMultiSet
 unionMS = unionWithMS (+)
 {-# INLINE unionMS #-}
 
+-- | カスタム関数で差分マルチセットを作る
+--
+-- >>> toListMS (differenceWithMS (\a b -> if a > b then Just (a-b) else Nothing) (fromListMS [1,2,2,3]) (fromListMS [2,3,3]))
+-- [1,2]
 differenceWithMS :: (Int -> Int -> Maybe Int) -> IntMultiSet -> IntMultiSet -> IntMultiSet
 differenceWithMS f (IntMultiSet _ _ a) (IntMultiSet _ _ b) = IntMultiSet (IM.foldl' (+) 0 c) (IM.size c) c
   where
     c = IM.differenceWith f a b
 
+-- | マルチセットの最小値を返す
+--
+-- >>> findMinMS (fromListMS [3,1,2])
+-- 1
 findMinMS :: IntMultiSet -> Int
 findMinMS IntMultiSet {mapMS = m} = (fst . IM.findMin) m
 
+-- | マルチセットの最大値を返す
+--
+-- >>> findMaxMS (fromListMS [3,1,2])
+-- 3
 findMaxMS :: IntMultiSet -> Int
 findMaxMS IntMultiSet {mapMS = m} = (fst . IM.findMax) m
 
+-- | 要素が含まれるか判定する
+--
+-- >>> memberMS 2 (fromListMS [1,2,3])
+-- True
+-- >>> memberMS 5 (fromListMS [1,2,3])
+-- False
 memberMS :: Int -> IntMultiSet -> Bool
 memberMS x IntMultiSet {mapMS = m} = IM.member x m
 
+-- | 要素が含まれないか判定する
+--
+-- >>> notMemberMS 5 (fromListMS [1,2,3])
+-- True
+-- >>> notMemberMS 2 (fromListMS [1,2,3])
+-- False
 notMemberMS :: Int -> IntMultiSet -> Bool
 notMemberMS x IntMultiSet {mapMS = m} = IM.notMember x m
 
+-- | 要素の個数を返す（存在しない場合は0）
+--
+-- >>> countMS 2 (fromListMS [1,2,2,3])
+-- 2
+-- >>> countMS 5 (fromListMS [1,2,3])
+-- 0
 countMS :: Int -> IntMultiSet -> Int
 countMS x IntMultiSet {mapMS = m} = IM.findWithDefault 0 x m
 
+-- | xより小さい最大の要素を返す
+--
+-- >>> lookupLTMS 3 (fromListMS [1,2,4,5])
+-- Just 2
+-- >>> lookupLTMS 1 (fromListMS [1,2,3])
+-- Nothing
 lookupLTMS :: Int -> IntMultiSet -> Maybe Int
 lookupLTMS x IntMultiSet {mapMS = m} = (fmap fst . IM.lookupLT x) m
 
+-- | xより大きい最小の要素を返す
+--
+-- >>> lookupGTMS 3 (fromListMS [1,2,4,5])
+-- Just 4
+-- >>> lookupGTMS 5 (fromListMS [1,2,3])
+-- Nothing
 lookupGTMS :: Int -> IntMultiSet -> Maybe Int
 lookupGTMS x IntMultiSet {mapMS = m} = (fmap fst . IM.lookupGT x) m
 
+-- | x以下の最大の要素を返す
+--
+-- >>> lookupLEMS 3 (fromListMS [1,2,4,5])
+-- Just 2
+-- >>> lookupLEMS 0 (fromListMS [1,2,3])
+-- Nothing
 lookupLEMS :: Int -> IntMultiSet -> Maybe Int
 lookupLEMS x IntMultiSet {mapMS = m} = (fmap fst . IM.lookupLE x) m
 
+-- | x以上の最小の要素を返す
+--
+-- >>> lookupGEMS 3 (fromListMS [1,2,4,5])
+-- Just 4
+-- >>> lookupGEMS 6 (fromListMS [1,2,3])
+-- Nothing
 lookupGEMS :: Int -> IntMultiSet -> Maybe Int
 lookupGEMS x IntMultiSet {mapMS = m} = (fmap fst . IM.lookupGE x) m
 
+-- | 各要素の個数リストを返す（重複なし）
+--
+-- >>> elemsMS (fromListMS [1,2,2,3])
+-- [1,2,1]
 elemsMS :: IntMultiSet -> [Int]
 elemsMS IntMultiSet {mapMS = m} = IM.elems m
 
+-- | マルチセットが空か判定する
+--
+-- >>> nullMS emptyMS
+-- True
+-- >>> nullMS (fromListMS [1])
+-- False
 nullMS :: IntMultiSet -> Bool
 nullMS IntMultiSet {mapMS = m} = IM.null m
 

@@ -25,6 +25,7 @@ data WeightedUnionFind arr i
       (IORef Int) -- 連結成分数
       i -- 代表元 (representative element)
 
+-- | 重み付き Union-Find を初期化する（連結成分数は要素数）
 newWUF :: (Ix i, MArray arr i IO, MArray arr Int IO) => (i, i) -> i -> IO (WeightedUnionFind arr i)
 newWUF (l, u) rep =
   WeightedUnionFind
@@ -36,6 +37,7 @@ newWUF (l, u) rep =
   where
     ix = index (l, u)
 
+-- | 要素の根を経路圧縮（累積重みも更新）しながら返す
 rootWUF :: (Ix i, MArray arr i IO, MArray arr Int IO) => WeightedUnionFind arr i -> i -> IO i
 rootWUF uf@(WeightedUnionFind parent _ weight _ rep) x = do
   p <- readArray parent x
@@ -49,11 +51,13 @@ rootWUF uf@(WeightedUnionFind parent _ weight _ rep) x = do
       modifyArray weight x (+ w)
       return r
 
+-- | 要素の重み（根への累積重み）を返す
 getWeightWUF :: (Ix i, MArray arr i IO, MArray arr Int IO) => WeightedUnionFind arr i -> i -> IO Int
 getWeightWUF uf@(WeightedUnionFind _ _ weight _ _) x = do
   _ <- rootWUF uf x -- 経路圧縮
   readArray weight x
 
+-- | 重みを指定して2集合を統合する（weight(x) - weight(y) = w となるよう設定）
 uniteWUF :: (Ix i, MArray arr i IO, MArray arr Int IO) => WeightedUnionFind arr i -> i -> i -> Int -> IO ()
 uniteWUF uf@(WeightedUnionFind parent size weight refN _) x y w = do
   x' <- rootWUF uf x
@@ -76,5 +80,6 @@ uniteWUF uf@(WeightedUnionFind parent size weight refN _) x y w = do
         writeArray parent x' y'
         writeArray weight x' (negate w')
 
+-- | 2要素が同じ集合に属するか判定する
 isSameWUF :: (Ix i, MArray arr i IO, MArray arr Int IO) => WeightedUnionFind arr i -> i -> i -> IO Bool
 isSameWUF uf x y = (==) <$> rootWUF uf x <*> rootWUF uf y
