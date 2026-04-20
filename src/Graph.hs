@@ -665,6 +665,29 @@ getNextGrid4 grid wallChar (r, c) =
         ]
    in validNeighbors
 
+-- | グリッド上で2マスが4方向隣接しているか
+--
+-- >>> isAdj4 (1, 1) (1, 2)
+-- True
+-- >>> isAdj4 (1, 1) (2, 2)
+-- False
+-- >>> isAdj4 (1, 1) (1, 1)
+-- False
+isAdj4 :: (Int, Int) -> (Int, Int) -> Bool
+isAdj4 (r1, c1) (r2, c2) = abs (r1 - r2) + abs (c1 - c2) == 1
+
+-- | グリッド上で2マスが8方向隣接しているか（同一マスは False）
+--
+-- >>> isAdj8 (1, 1) (2, 2)
+-- True
+-- >>> isAdj8 (1, 1) (1, 1)
+-- False
+isAdj8 :: (Int, Int) -> (Int, Int) -> Bool
+isAdj8 (r1, c1) (r2, c2) =
+  let dr = abs (r1 - r2)
+      dc = abs (c1 - c2)
+   in max dr dc == 1
+
 -- | グリッド上の隣接座標を取得する（8方向版）
 --
 -- >>> import Data.Array.Unboxed (listArray)
