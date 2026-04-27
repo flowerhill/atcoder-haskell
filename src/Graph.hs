@@ -12,6 +12,7 @@ import Control.Monad.ST
 import Data.Array.ST
 import Data.Array.Unboxed
 import Data.Foldable (traverse_)
+import Data.Foldable.Extra (toList)
 import Data.List (foldl')
 import Data.List.Extra (chunksOf)
 import Data.STRef
@@ -987,3 +988,73 @@ subtreeSizes bnds getNext root = runSTUArray do
 -- 3
 subtreeSizesArray :: Array Int [Int] -> Int -> UArray Int Int
 subtreeSizesArray graph = subtreeSizes (bounds graph) (graph !)
+
+-- =============================================================================
+-- 汎用木DP
+-- =============================================================================
+
+-- | 純粋再帰版 木DP（根のDP結果のみ返す）
+--
+--   graph    : 無向グラフ（木）
+--   root     : 根の頂点
+--   initState: 頂点 → 初期状態
+--   merge    : 親の累積状態 → 子のDP結果 → 新しい親の状態
+--
+--   ※ チェーン状の木（深さ N）でスタック溢れの可能性あり
+--     → +RTS -K1G で回避、または treeDPBFS を使う
+--
+-- >>> treeDFS (buildG2 (1,4) [[1,2],[1,3],[3,4]]) 1 (const 1) (+)
+-- 4
+treeDFS :: Array Int [Int] -> Int -> (Int -> a) -> (a -> a -> a) -> a
+treeDFS graph root initState merge = go (-1) root
+  where
+    go p v = foldl' merge (initState v) [go v u | u <- graph ! v, u /= p]
+
+-- | BFS逆順版 木DP（全頂点のDP結果を返す、スタック安全）
+--
+--   O(N) 時間・空間。チェーン状の木でも安全。
+--   返り値は Array なので dp ! v で各頂点の結果を取得可能。
+--
+-- >>> treeDPBFS (buildG2 (1,4) [[1,2],[1,3],[3,4]]) 1 (const 1) (+) ! 1
+-- 4
+-- >>> treeDPBFS (buildG2 (1,4) [[1,2],[1,3],[3,4]]) 1 (const 1) (+) ! 3
+-- 2
+treeDPBFS :: Array Int [Int] -> Int -> (Int -> a) -> (a -> a -> a) -> Array Int a
+treeDPBFS graph root initState merge = runSTArray do
+  let bnds = bounds graph
+
+  -- BFS で訪問順と親を記録
+  parent <- newArray bnds (-1) :: ST s (STUArray s Int Int)
+  visited <- newArray bnds False :: ST s (STUArray s Int Bool)
+  orderRef <- newSTRef (Seq.empty :: Seq.Seq Int)
+  queueRef <- newSTRef (Seq.singleton root)
+  writeArray visited root True
+
+  let bfsLoop = do
+        q <- readSTRef queueRef
+        case Seq.viewl q of
+          Seq.EmptyL -> return ()
+          v Seq.:< rest -> do
+            writeSTRef queueRef rest
+            modifySTRef' orderRef (Seq.|> v)
+            forM_ (graph ! v) \u -> do
+              seen <- readArray visited u
+              unless seen do
+                writeArray visited u True
+                writeArray parent u v
+                modifySTRef' queueRef (Seq.|> u)
+            bfsLoop
+  bfsLoop
+
+  -- DP 配列を初期化
+  dp <- newListArray bnds [initState v | v <- range bnds]
+
+  -- 逆BFS順（葉 → 根）でマージ
+  order <- toList <$> readSTRef orderRef
+  forM_ (reverse order) \v -> do
+    p <- readArray parent v
+    when (p /= -1) do
+      pVal <- readArray dp p
+      vVal <- readArray dp v
+      writeArray dp p (merge pVal vVal)
+  return dp

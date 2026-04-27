@@ -4,8 +4,8 @@ module UnionFind where
 
 import Control.Monad
 import Control.Monad.ST
-import Data.Array.MArray (MArray, getAssocs, newArray, readArray, writeArray)
-import Data.Ix (Ix)
+import Data.Array.MArray (MArray, newArray, newListArray, readArray, writeArray)
+import Data.Ix (Ix, range)
 
 data UnionFind arr s i = UnionFind
   { ufParent :: arr s i i,
@@ -17,12 +17,9 @@ data UnionFind arr s i = UnionFind
 -- >>> import Data.Array.ST (STArray)
 -- >>> runST $ do { uf <- newUF (1,3) :: ST s (UnionFind STArray s Int); getRoot uf 1 }
 -- 1
-newUF :: (Ix i, MArray (arr s) i (ST s), MArray (arr s) Int (ST s)) => (i, i) -> ST s (UnionFind arr s i)
 newUF bounds = do
-  parent <- newArray bounds undefined
+  parent <- newListArray bounds (range bounds)
   size <- newArray bounds 1
-  assocs <- getAssocs size
-  forM_ assocs $ \(idx, _) -> writeArray parent idx idx
   return $ UnionFind parent size
 
 -- | 要素の根（代表元）を経路圧縮しながら返す

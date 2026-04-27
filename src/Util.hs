@@ -21,6 +21,7 @@ import qualified Data.List as L
 import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Unboxed.Mutable as VUM
 import Debug.Trace (traceShow)
+import Foreign (FiniteBits (countLeadingZeros, finiteBitSize))
 import System.Environment (lookupEnv)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -135,6 +136,7 @@ isCube n = cubeRoot ^ 3 == n
     cubeRoot = round (fromIntegral n ** (1 / 3 :: Double))
 
 -- 回文
+
 -- | 文字列が回文か判定する
 --
 -- >>> isPalindrome "aba"
@@ -668,3 +670,16 @@ lisLengths xs = runST $ do
 -- [2,1,2,1,2,2,1,1]
 ldsLengths :: VU.Vector Int -> VU.Vector Int
 ldsLengths = VU.reverse . lisLengths . VU.reverse
+
+-- | ⌈log₂ k⌉ を計算する。
+--
+-- >>> ceilLog2 1
+-- 0
+-- >>> ceilLog2 4
+-- 2
+-- >>> ceilLog2 5
+-- 3
+ceilLog2 :: Int -> Int
+ceilLog2 k
+  | k <= 1 = 0
+  | otherwise = finiteBitSize k - countLeadingZeros (k - 1)
