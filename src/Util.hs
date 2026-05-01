@@ -328,9 +328,38 @@ exEuclid = fn 1 0 0 1
 sumOfGeo :: (Integral a, Integral b) => a -> a -> b -> a
 sumOfGeo a r n = a * (r ^ n - 1) `div` (r - 1)
 
--- 等差数列の和
-sumOfArith :: (Integral a, Integral b) => a -> a -> b -> a
-sumOfArith = undefined
+-- | 等比数列の和 (mod 10^9+7): 初項 a, 公比 r, 項数 n
+-- a * (r^n - 1) / (r - 1) を mod 10^9+7 で計算
+-- r == 1 の場合は a * n を返す
+--
+-- >>> sumOfGeoMod 1 2 4
+-- 15
+-- >>> sumOfGeoMod 3 3 3
+-- 39
+-- >>> sumOfGeoMod 1 1 5
+-- 5
+sumOfGeoMod :: Int -> Int -> Int -> Int
+sumOfGeoMod a r n
+  | r == 1 = a `mulMod` (n `mod` modulus)
+  | otherwise = a `mulMod` ((powMod r n `subMod` 1) `divMod2` ((r - 1) `mod` modulus))
+
+-- | 等差数列の和: a から b までの公差1の整数の総和 (a+b)*(b-a+1)/2
+--
+-- >>> sumOfArith 1 10
+-- 55
+-- >>> sumOfArith 3 5
+-- 12
+sumOfArith :: (Integral a) => a -> a -> a
+sumOfArith a b = (a + b) * (b - a + 1) `div` 2
+
+-- | 等差数列の和 (mod 10^9+7): a から b までの公差1の整数の総和
+--
+-- >>> sumOfArithMod 1 10
+-- 55
+-- >>> sumOfArithMod 1 1000000007
+-- 3
+sumOfArithMod :: Integer -> Integer -> Int
+sumOfArithMod a b = fromInteger $ sumOfArith a b `mod` fromIntegral modulus
 
 -- | mod 10^9+7 のモジュラ逆数（拡張ユークリッド利用）
 --
