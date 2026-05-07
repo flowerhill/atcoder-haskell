@@ -1058,3 +1058,44 @@ treeDPBFS graph root initState merge = runSTArray do
       vVal <- readArray dp v
       writeArray dp p (merge pVal vVal)
   return dp
+
+-- =============================================================================
+-- 全頂点対最短経路 (Warshall-Floyd)
+-- =============================================================================
+
+-- | 加算でオーバーフローしない擬似無限大
+wfInf :: Int
+wfInf = maxBound `div` 2
+
+-- | ワーシャルフロイド法 — 全頂点対最短経路 O(V^3)
+--
+--   入力: d0 ! (i,j) = i→j の辺重み (辺なし: wfInf、対角: 0)
+--   出力: d  ! (i,j) = i→j の最短距離
+--   bounds は ((lo,lo),(hi,hi)) の正方形を想定
+--
+-- >>> import Data.Array.Unboxed (listArray, UArray, (!))
+-- >>> let big = wfInf
+-- >>> let d0 = listArray ((0,0),(2,2)) [0,3,big, big,0,1, 7,big,0] :: UArray (Int,Int) Int
+-- >>> let d = warshallFloyd d0
+-- >>> d ! (0,2)
+-- 4
+-- >>> d ! (1,0)
+-- 8
+warshallFloyd :: UArray (Int, Int) Int -> UArray (Int, Int) Int
+warshallFloyd d0 = runSTUArray do
+  d <- thaw d0
+  forM_ vs \k ->
+    forM_ vs \i -> do
+      dik <- readArray d (i, k)
+      when (dik < wfInf) $
+        forM_ vs \j -> do
+          dkj <- readArray d (k, j)
+          when (dkj < wfInf) do
+            dij <- readArray d (i, j)
+            let nd = dik + dkj
+            when (nd < dij) $ writeArray d (i, j) nd
+  return d
+  where
+    ((lo, _), (hi, _)) = bounds d0
+    vs = [lo .. hi]
+    
