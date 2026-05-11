@@ -19,7 +19,7 @@ module Lib (solve) where
 
 import Control.Monad
 import Control.Monad.ST.Strict
-import Data.Array.IArray qualified as IA
+import Data.Array.IArray (listArray, (!))
 import Data.Array.ST.Safe
 import Data.Heap qualified as H
 import Data.IntMap.Strict qualified as IM
