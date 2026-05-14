@@ -36,7 +36,6 @@ library
                       Graph
                       MyList
                       IntMultiSet
-                      Dijkstra
                       UnionFind
                       WUnionFind
     hs-source-dirs:   src
