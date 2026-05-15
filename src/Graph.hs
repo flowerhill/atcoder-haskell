@@ -4,13 +4,34 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Graph where
 
-import Control.Monad
-import Control.Monad.ST
+import Control.Monad (filterM, foldM, forM_, unless, when)
+import Control.Monad.ST (ST, runST)
+import Data.Array.IArray
+  ( Array,
+    IArray (..),
+    Ix (inRange, range),
+    accumArray,
+    elems,
+    listArray,
+    (!),
+  )
 import Data.Array.ST
-import Data.Array.Unboxed
+  ( MArray (newArray),
+    STArray,
+    STUArray,
+    modifyArray',
+    newListArray,
+    readArray,
+    runSTArray,
+    runSTUArray,
+    thaw,
+    writeArray,
+  )
+import Data.Array.Unboxed (UArray)
 import Data.Foldable (traverse_)
 import Data.Foldable.Extra (toList)
 import qualified Data.Heap as H
@@ -18,7 +39,7 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl')
 import Data.List.Extra (chunksOf)
-import Data.STRef
+import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as S
 
@@ -298,7 +319,7 @@ dfsSingleSource getNext visited start
 -- >>> S.toList $ dfs (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) S.empty [1,3]
 -- [1,2,3,4]
 dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
-dfs getNext visited [] = visited
+dfs _ visited [] = visited
 dfs getNext visited (curr : rest)
   | S.member curr visited = dfs getNext visited rest
   | otherwise =
@@ -814,6 +835,11 @@ printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elem
 
 data LRUD = L | R | U | D deriving (Show, Eq, Ord, Ix, Enum)
 
+lrud :: [(Integer, Integer)]
+left :: (Integer, Integer)
+right :: (Integer, Integer)
+up :: (Integer, Integer)
+down :: (Integer, Integer)
 lrud@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
 -- | グリッドの連結成分数（'.'の島の数を数える用途など）
@@ -1196,4 +1222,3 @@ dijkstraST nextStates (lower, upper) v0s = runSTUArray $ do
               (nextStates v)
 
           aux (H.uncons queue') dist
-

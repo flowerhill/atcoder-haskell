@@ -713,4 +713,26 @@ ceilLog2 k
   | k <= 1 = 0
   | otherwise = finiteBitSize k - countLeadingZeros (k - 1)
 
-UnionFind.hs
+-- | 極座標 (r, θ) を直交座標 (x, y) に変換する
+--   x = r cos θ, y = r sin θ
+--
+-- >>> polarToCartesian 5 0
+-- (5.0,0.0)
+-- >>> polarToCartesian 0 99
+-- (0.0,0.0)
+-- >>> fst (polarToCartesian 1 pi)
+-- -1.0
+polarToCartesian :: Double -> Double -> (Double, Double)
+polarToCartesian r theta = (r * cos theta, r * sin theta)
+
+-- | 直交座標 (x, y) を極座標 (r, θ) に変換する
+--   r = √(x² + y²),  θ = atan2 y x ∈ (-π, π]
+--
+-- >>> cartesianToPolar 3 4
+-- (5.0,0.9272952180016122)
+-- >>> cartesianToPolar 1 0
+-- (1.0,0.0)
+-- >>> cartesianToPolar 0 0
+-- (0.0,0.0)
+cartesianToPolar :: Double -> Double -> (Double, Double)
+cartesianToPolar x y = (sqrt (x * x + y * y), atan2 y x)
