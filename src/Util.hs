@@ -712,3 +712,5 @@ ceilLog2 :: Int -> Int
 ceilLog2 k
   | k <= 1 = 0
   | otherwise = finiteBitSize k - countLeadingZeros (k - 1)
+
+UnionFind.hs
