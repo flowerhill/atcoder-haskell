@@ -11,8 +11,9 @@
 module Main where
 
 import Control.Monad (forM)
-import Data.Char (isSpace)
+import Data.Char (isAlphaNum, isSpace)
 import Data.List (intercalate, isPrefixOf, nub)
+import Data.Maybe (fromMaybe)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import System.Directory (doesFileExist)
@@ -601,16 +602,16 @@ generateBundle mainMod localMods localModMap =
       -- 2. module Main where
       ["module Main where", ""]
       ++
-      -- 3. 外部ライブラリのimportのみ残す
+      -- 3. 外部ライブラリのimportのみ残す（ローカルへの qualified import は捨てる）
       externalImports
       ++ [""]
       ++
-      -- 4. ローカルモジュールの本体を展開（INLINEプラグマ含む）
-      concatMap expandModule localMods
+      -- 4. ローカルモジュールの本体を展開（INLINEプラグマ含む、ローカル qualified prefix を除去）
+      concatMap (expandModule localModMap) localMods
       ++
-      -- 5. Main本体
+      -- 5. Main本体（ローカル qualified prefix を除去）
       ["", "-- Main"]
-      ++ modBody mainMod
+      ++ map (stripQualifiers (qualifiedLocalPrefixes localModMap mainMod)) (modBody mainMod)
   where
     allImports = concatMap modImports (mainMod : localMods)
     localNames = S.fromList $ "Main" : M.keys localModMap
@@ -622,12 +623,65 @@ generateBundle mainMod localMods localModMap =
             not (null (impName imp))
         ]
 
--- | モジュールを展開
+-- | qualified なローカルimportの prefix（asがあればそれ、なければモジュール名）を抽出
 --
--- >>> expandModule (parseModule "Foo.hs" "module Foo where\nfoo = 1")
--- ["","-- Foo","foo = 1"]
--- >>> expandModule (parseModule "Bar.hs" "module Bar where")
+-- >>> let m = parseModule "X.hs" "module X where\nimport qualified Foo as F\nimport qualified Bar\nimport qualified Data.Map as DM"
+-- >>> qualifiedLocalPrefixes (M.fromList [("Foo", undefined), ("Bar", undefined)]) m
+-- ["F","Bar"]
+-- >>> qualifiedLocalPrefixes M.empty (parseModule "X.hs" "module X where\nimport qualified Foo as F")
+-- []
+qualifiedLocalPrefixes :: M.Map String ModuleInfo -> ModuleInfo -> [String]
+qualifiedLocalPrefixes localModMap info =
+  [ fromMaybe (impName imp) (impAs imp)
+    | imp <- modImports info,
+      impQualified imp,
+      impName imp `M.member` localModMap
+  ]
+
+-- | 指定したqualifier prefixをコードから除去する
+--
+-- 識別子境界を考慮して "Pfx." だけを取り除く。文字列リテラルやコメントは考慮しない簡易版。
+--
+-- >>> stripQualifier "M" "M.foo + M.bar"
+-- "foo + bar"
+-- >>> stripQualifier "M" "xM.foo"
+-- "xM.foo"
+-- >>> stripQualifier "M" "f (M.x) M.y"
+-- "f (x) y"
+-- >>> stripQualifier "M" ""
+-- ""
+-- >>> stripQualifier "Foo.Bar" "Foo.Bar.x + Foo.Bar.y"
+-- "x + y"
+stripQualifier :: String -> String -> String
+stripQualifier prefix = go True
+  where
+    p = prefix ++ "."
+    np = length p
+    isIdent c = isAlphaNum c || c == '_' || c == '\''
+    go _ [] = []
+    go boundary s@(c : cs)
+      | boundary && take np s == p = go True (drop np s)
+      | otherwise = c : go (not (isIdent c)) cs
+
+-- | 複数の prefix をまとめて除去
+--
+-- >>> stripQualifiers ["M", "N"] "M.foo + N.bar + x"
+-- "foo + bar + x"
+-- >>> stripQualifiers [] "M.foo"
+-- "M.foo"
+stripQualifiers :: [String] -> String -> String
+stripQualifiers prefixes = foldr (.) id (map stripQualifier prefixes)
+
+-- | モジュールを展開（qualified なローカルimportの prefix を除去）
+--
+-- >>> let mods = M.fromList [("Foo", undefined)]
+-- >>> let m = parseModule "Bar.hs" "module Bar where\nimport qualified Foo as F\nbar = F.foo + 1"
+-- >>> expandModule mods m
+-- ["","-- Bar","bar = foo + 1"]
+-- >>> expandModule M.empty (parseModule "Bar.hs" "module Bar where")
 -- ["","-- Bar"]
-expandModule :: ModuleInfo -> [String]
-expandModule info =
-  ["", "-- " ++ modName info] ++ modBody info
+expandModule :: M.Map String ModuleInfo -> ModuleInfo -> [String]
+expandModule localModMap info =
+  ["", "-- " ++ modName info] ++ map strip (modBody info)
+  where
+    strip = stripQualifiers (qualifiedLocalPrefixes localModMap info)
