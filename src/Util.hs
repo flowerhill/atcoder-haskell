@@ -212,6 +212,24 @@ swapList i j xs
 ceilDiv :: Double -> Double -> Int
 ceilDiv a b = ceiling $ a / b
 
+-- | Int版の天井除算 ceil(a / b)。b /= 0 を仮定する。
+-- 任意符号で正しく動き、Double を経由しないので精度誤差がない。
+-- O(1)
+--
+-- >>> ceilDivInt 7 3
+-- 3
+-- >>> ceilDivInt 6 3
+-- 2
+-- >>> ceilDivInt 0 5
+-- 0
+-- >>> ceilDivInt (-7) 3
+-- -2
+-- >>> ceilDivInt 7 (-3)
+-- -2
+ceilDivInt :: Int -> Int -> Int
+ceilDivInt a b = negate ((negate a) `div` b)
+{-# INLINE ceilDivInt #-}
+
 -- IntMod
 
 modulus :: Int
@@ -736,3 +754,14 @@ polarToCartesian r theta = (r * cos theta, r * sin theta)
 -- (0.0,0.0)
 cartesianToPolar :: Double -> Double -> (Double, Double)
 cartesianToPolar x y = (sqrt (x * x + y * y), atan2 y x)
+
+-- | 45°回転 (x, y) -> (x + y, x - y)。
+-- 回転後の座標では「各軸の差の絶対値の max」が元のマンハッタン距離に一致する。
+--
+-- >>> rot45 (3, 1)
+-- (4,2)
+-- >>> let (u1, v1) = rot45 (3, 1); (u2, v2) = rot45 (0, 0)
+-- >>> max (abs (u1 - u2)) (abs (v1 - v2))
+-- 4
+rot45 :: (Int, Int) -> (Int, Int)
+rot45 (x, y) = (x + y, x - y)
