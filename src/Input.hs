@@ -49,6 +49,10 @@ getStrings = map BC.unpack . BC.words <$> BC.getLine
 getPairInt :: IO (Int, Int)
 getPairInt = (\[a, b] -> (a, b)) <$> getInts
 
+-- | 標準入力から Int の3つ組を1つ読み込む
+getTripleInt :: IO (Int, Int, Int)
+getTripleInt = (\[a, b, c] -> (a, b, c)) <$> getInts
+
 -- | 文字を数字（0-9）に変換する
 --
 -- >>> charToDigit '5'
@@ -78,6 +82,7 @@ getDouble :: IO [Double]
 getDouble = map read . words . BC.unpack <$> BC.getLine
 
 -- others
+
 -- | 2要素リストをタプルに変換する
 --
 -- >>> fromListToTuple [3, 7]
