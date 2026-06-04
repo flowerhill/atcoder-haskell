@@ -765,3 +765,17 @@ cartesianToPolar x y = (sqrt (x * x + y * y), atan2 y x)
 -- 4
 rot45 :: (Int, Int) -> (Int, Int)
 rot45 (x, y) = (x + y, x - y)
+
+-- | 長さ n の円環で、0-indexed 位置 i を右シフト量 d だけ読み替えた先のインデックスを返す。
+-- 配列を実際に回さず参照位置の読み替えだけで巡回シフトを O(1) で表現するのに使う。
+--
+-- >>> cyclicIndex 8 1 0
+-- 7
+-- >>> cyclicIndex 8 1 1
+-- 0
+-- >>> cyclicIndex 5 0 3
+-- 3
+-- >>> cyclicIndex 5 2 1
+-- 4
+cyclicIndex :: Int -> Int -> Int -> Int
+cyclicIndex n d i = (i - d) `mod` n
