@@ -779,3 +779,17 @@ rot45 (x, y) = (x + y, x - y)
 -- 4
 cyclicIndex :: Int -> Int -> Int -> Int
 cyclicIndex n d i = (i - d) `mod` n
+
+-- | 2つのリストを先頭から交互に連結する。長さが違う場合、余った要素は末尾にそのまま付く。
+--
+-- >>> interleave "ace" "bd"
+-- "abcde"
+-- >>> interleave "ab" "cd"
+-- "acbd"
+-- >>> interleave [1,2] [3,4,5,6 :: Int]
+-- [1,3,2,4,5,6]
+-- >>> interleave "abc" ""
+-- "abc"
+interleave :: [a] -> [a] -> [a]
+interleave [] ys = ys
+interleave (x : xs) ys = x : interleave ys xs
