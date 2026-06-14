@@ -154,26 +154,26 @@ safeReadArray arr idx = do
 
 {-- いもす法 --}
 
--- | 1次元いもす法: 半開区間 [l, r) への加算クエリを処理し、
+-- | 1次元いもす法: 閉区間 [l, r] への加算クエリを処理し、
 -- 各点での合計値の UArray を返す。
--- bounds は結果配列の範囲。各クエリの r は「bounds の上限 + 1」まで指定可。
+-- bounds は結果配列の範囲。各クエリの r は bounds の上限まで指定可。
 -- O(N + W)、N=クエリ数, W=範囲幅。
 --
 -- >>> import Data.Array.Unboxed (elems, (!))
--- >>> elems $ imos1D (0, 4) [(0, 3, 1), (1, 4, 2)]
+-- >>> elems $ imos1D (0, 4) [(0, 2, 1), (1, 3, 2)]
 -- [1,3,3,2,0]
 -- >>> elems $ imos1D (0, 3) []
 -- [0,0,0,0]
--- >>> imos1D (1, 5) [(2, 5, 10)] ! 4
+-- >>> imos1D (1, 5) [(2, 5, 10)] ! 5
 -- 10
 imos1D :: (Int, Int) -> [(Int, Int, Int)] -> UArray Int Int
 imos1D (lo, hi) qs = runSTUArray $ do
-  -- 差分配列は r 端まで書き込める必要があるので bounds は (lo, hi+1)
+  -- 閉区間なので r+1 に書き込める必要があり、bounds は (lo, hi+1)
   diff <- newArray (lo, hi + 1) 0 :: ST s (STUArray s Int Int)
   forM_ qs $ \(l, r, v) -> do
     modifyArray2 diff l v (+)
-    modifyArray2 diff r (negate v) (+)
-  -- 累積和
+    modifyArray2 diff (r + 1) (negate v) (+) -- 閉区間 [l, r] = r の「次」で打ち消す
+    -- 累積和
   forM_ [lo + 1 .. hi] $ \i -> do
     prev <- readArray diff (i - 1)
     modifyArray2 diff i prev (+)
@@ -184,16 +184,16 @@ imos1D (lo, hi) qs = runSTUArray $ do
     writeArray result i v
   return result
 
--- | 2次元いもす法: 半開矩形 [lx, rx) × [ly, ry) への加算クエリを処理し、
--- 各単位セル (x, y) (= [x, x+1) × [y, y+1)) での合計値の UArray を返す。
--- bounds は結果配列のセル範囲。各クエリの rx, ry は「bounds の上限 + 1」まで指定可。
+-- | 2次元いもす法: 閉矩形 [lx, rx] × [ly, ry] への加算クエリを処理し、
+-- 各単位セル (x, y) での合計値の UArray を返す。
+-- bounds は結果配列のセル範囲。各クエリの rx, ry は bounds の上限まで指定可。
 -- O(N + W*H)。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> let arr = imos2D ((0,0),(2,2)) [((0,0),(2,2),1), ((1,1),(3,3),1)]
+-- >>> let arr = imos2D ((0,0),(2,2)) [((0,0),(1,1),1), ((1,1),(2,2),1)]
 -- >>> [arr ! (i,j) | i <- [0..2], j <- [0..2]]
 -- [1,1,0,1,2,1,0,1,1]
--- >>> let arr = imos2D ((0,0),(1,1)) [((0,0),(2,2),5)]
+-- >>> let arr = imos2D ((0,0),(1,1)) [((0,0),(1,1),5)]
 -- >>> [arr ! (i,j) | i <- [0..1], j <- [0..1]]
 -- [5,5,5,5]
 imos2D ::
@@ -201,14 +201,14 @@ imos2D ::
   [((Int, Int), (Int, Int), Int)] ->
   UArray (Int, Int) Int
 imos2D ((xlo, ylo), (xhi, yhi)) qs = runSTUArray $ do
-  -- 差分配列は (rx, ry) 端まで書き込める必要があるので余白 +1
+  -- 閉矩形なので (rx+1, ry+1) に書き込める必要があり、余白 +1
   let dbnd = ((xlo, ylo), (xhi + 1, yhi + 1))
   diff <- newArray dbnd 0 :: ST s (STUArray s (Int, Int) Int)
   forM_ qs $ \((lx, ly), (rx, ry), v) -> do
     modifyArray2 diff (lx, ly) v (+)
-    modifyArray2 diff (rx, ly) (negate v) (+)
-    modifyArray2 diff (lx, ry) (negate v) (+)
-    modifyArray2 diff (rx, ry) v (+)
+    modifyArray2 diff (rx + 1, ly) (negate v) (+)
+    modifyArray2 diff (lx, ry + 1) (negate v) (+)
+    modifyArray2 diff (rx + 1, ry + 1) v (+)
   -- x方向 累積和
   forM_ [ylo .. yhi + 1] $ \y ->
     forM_ [xlo + 1 .. xhi + 1] $ \x -> do
