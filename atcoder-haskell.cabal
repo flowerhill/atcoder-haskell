@@ -27,7 +27,11 @@ extra-source-files:
 library
     exposed-modules:  Lib
                       Input
-                      Util
+                      Math
+                      ModInt
+                      Geometry
+                      MyString
+                      Debug
                       MyArray
                       MyMArray
                       MyMVector

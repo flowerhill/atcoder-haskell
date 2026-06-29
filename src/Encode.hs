@@ -2,6 +2,15 @@ module Encode where
 
 import Data.List (group)
 
+-- | ランレングス圧縮: 連続する同じ要素を (値, 個数) にまとめる
+--
+-- >>> runLengthEncode "aaabbc"
+-- [('a',3),('b',2),('c',1)]
+-- >>> runLengthEncode [1,1,2,3,3,3 :: Int]
+-- [(1,2),(2,1),(3,3)]
+runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
+runLengthEncode = map (\xs -> (head xs, length xs)) . group
+
 -- | エンコード: 文字列をラン長圧縮する
 --
 -- >>> encode "aaabbc"
