@@ -61,7 +61,7 @@ clean:
 	rm -rf dist/Submit.hs
 
 doctest:
-	cabal test doctest --test-show-details=direct
+	./scripts/doctest.sh
 
 bundle:
 	cabal run bundle --verbose=0 -- src app/Main.hs > dist/Submit.hs

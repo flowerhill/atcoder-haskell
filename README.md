@@ -26,14 +26,15 @@ acc config default-template atcoder-haskell
 ├── app/
 │   └── Main.hs           # メインプログラム
 ├── src/                  # ライブラリモジュール
-│   ├── Lib.hs           # 基本ライブラリ
+│   ├── Lib.hs           # solve のひな形
 │   ├── Input.hs         # 入力処理
-│   ├── Util.hs          # ユーティリティ
-│   ├── Array.hs         # 配列操作
+│   ├── Math.hs          # 数論・整数演算
+│   ├── ModInt.hs        # mod 10^9+7 演算
 │   ├── Graph.hs         # グラフアルゴリズム
-│   ├── Dijkstra.hs     # ダイクストラ法
 │   └── ...              # その他のアルゴリズム
 ├── spec/                 # テストコード
+├── scripts/
+│   └── doctest.sh       # モジュール毎の doctest 実行
 ├── tools/
 │   └── Bundle.hs        # ファイル結合ツール
 └── test/                # ojで取得したテストケース
@@ -62,6 +63,8 @@ acc config default-template atcoder-haskell
 | `make test-case CASE=N` | 特定のテストケースを実行 |
 | `make test-bundle` | バンドルファイルでテスト実行     |
 | `make unit-test` | ユニットテスト実行               |
+| `make doctest`  | 各モジュールの doctest を実行       |
+| `make test-all` | サンプルテスト + doctest           |
 
 ### 提出関連
 
@@ -91,21 +94,21 @@ cd abc300/a
 `app/Main.hs`を編集してソリューションを実装：
 
 ```haskell
-{-# LANGUAGE OverloadedStrings #-}
-import Lib
-import Input
-import Util
-import qualified Data.ByteString.Char8 as BS
+module Main where
+
+import Input (getInts)
 
 main :: IO ()
 main = do
-    input <- BS.getLine
-    let result = solve input
-    print result
+    xs <- getInts
+    print (solve xs)
 
-solve :: BS.ByteString -> Int
-solve input = -- ソリューションを実装
+solve :: [Int] -> Int
+solve = sum -- ソリューションを実装
 ```
+
+必要なモジュールだけを直接 import する（例: `import Math (powMod)`）。
+提出時はバンドラが import したモジュールとその依存だけを 1 ファイルにまとめる。
 
 ### 3. テスト
 
@@ -138,15 +141,19 @@ make submit-oj
 
 プロジェクトには以下の便利なライブラリが含まれています：
 
+- **Lib.hs**: `solve` のひな形
 - **Input.hs**: 入力処理のヘルパー関数
-- **Util.hs**: 汎用ユーティリティ関数
-- **Array.hs**: 配列操作関数
-- **Graph.hs**: グラフアルゴリズム
-- **Dijkstra.hs**: ダイクストラ法の実装
-- **UnionFindIOUArray.hs**: Union-Find構造
+- **Math.hs**: 数論・整数演算（素数判定・篩・nCr・拡張ユークリッドなど）
+- **ModInt.hs**: mod 10^9+7 のモジュラ演算と `IntMod` 型
+- **Geometry.hs**: 平面幾何（距離・座標変換・回転）
+- **MyString.hs**: 文字列操作（回文判定・部分文字列）
+- **Debug.hs**: DEBUG 環境変数連動のトレース
+- **Graph.hs**: グラフアルゴリズム（BFS/DFS/最短路/Dijkstra/SCC/Warshall-Floyd/木DP）
 - **BSearchArray.hs / BSearchVector.hs**: 二分探索
-- **Encode.hs**: エンコード関連
+- **Encode.hs**: ランレングス圧縮
 - **IntMultiSet.hs**: 整数のマルチセット
+- **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
+- **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
 - **MyList.hs**: リスト操作拡張
 
 ## ⚙️ 設定
@@ -164,10 +171,9 @@ make submit-oj
 
 ### 最適化設定
 
-Cabalプロジェクトで最適化オプションが設定されています：
+Cabalプロジェクトで以下の ghc-options を設定しています：
 - `-O2`: 最適化レベル2
-- `-funbox-strict-fields`: 厳格フィールドの最適化
-- `-fexcess-precision`: 精度向上
+- `-Wall`: 警告を有効化
 
 ## 🔧 トラブルシューティング
 
