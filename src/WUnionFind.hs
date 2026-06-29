@@ -18,7 +18,7 @@ import Data.Primitive.MutVar (MutVar, modifyMutVar', newMutVar, readMutVar)
 -- $setup
 -- >>> import Data.Array.IO (IOUArray)
 -- >>> import Data.Array.ST (STUArray, runSTUArray)
--- >>> import Control.Monad.ST (runST)
+-- >>> import Control.Monad.ST (ST, runST)
 
 -- | modifyArray の互換実装 (array < 0.5.6.0 向け)
 modifyArray :: (MArray a e m, Ix i) => a i e -> i -> (e -> e) -> m ()
@@ -41,7 +41,7 @@ data WeightedUnionFind arr s i = WeightedUnionFind
 --
 -- IO で使う例:
 --
--- >>> uf <- newWUF @IOUArray (1, 5)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,5)
 -- >>> rootWUF uf 3
 -- 3
 -- >>> countWUF uf
@@ -51,7 +51,7 @@ data WeightedUnionFind arr s i = WeightedUnionFind
 --
 -- >>> :{
 -- runST $ do
---   uf <- newWUF @(STUArray _) (1, 5)
+--   uf <- newWUF (1 :: Int, 5) :: ST s (WeightedUnionFind (STUArray s) s Int)
 --   uniteDiffWUF uf 1 2 3
 --   countWUF uf
 -- :}
@@ -72,7 +72,7 @@ newWUF bnds = do
 -- | 経路圧縮付き find
 -- 返り値 (root, s, o) は A_x = s * A_root + o を意味する
 --
--- >>> uf <- newWUF @IOUArray (1, 3)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
 -- >>> findWUF uf 2
 -- (2,1,0)
 -- >>> uniteDiffWUF uf 1 2 5
@@ -101,7 +101,7 @@ findWUF uf x = do
 
 -- | 要素の根を返す（経路圧縮あり）
 --
--- >>> uf <- newWUF @IOUArray (1, 5)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,5)
 -- >>> rootWUF uf 3
 -- 3
 -- >>> uniteDiffWUF uf 1 3 0
@@ -119,7 +119,7 @@ rootWUF uf x = do
 
 -- | A_y = s * A_x + o (s は ±1) という関係を追加する
 --
--- >>> uf <- newWUF @IOUArray (1, 3)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
 -- >>> uniteWUF uf 1 2 (-1) 7
 -- >>> relationWUF uf 1 2
 -- Just (-1,7)
@@ -155,7 +155,7 @@ uniteWUF uf x y s o = do
 
 -- | A_y - A_x = w (典型的な差分制約)
 --
--- >>> uf <- newWUF @IOUArray (1, 4)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,4)
 -- >>> uniteDiffWUF uf 1 2 3
 -- >>> uniteDiffWUF uf 2 3 5
 -- >>> getWeightWUF uf 3
@@ -173,7 +173,7 @@ uniteDiffWUF uf x y w = uniteWUF uf x y 1 w
 
 -- | A_x + A_y = v (符号反転を含む和の制約)
 --
--- >>> uf <- newWUF @IOUArray (1, 3)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
 -- >>> uniteSumWUF uf 1 2 10
 -- >>> relationWUF uf 1 2
 -- Just (-1,10)
@@ -190,7 +190,7 @@ uniteSumWUF uf x y v = uniteWUF uf x y (-1) v
 
 -- | 2要素が同じ集合に属するか判定する
 --
--- >>> uf <- newWUF @IOUArray (1, 3)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
 -- >>> uniteDiffWUF uf 1 2 1
 -- >>> isSameWUF uf 1 2
 -- True
@@ -207,7 +207,7 @@ isSameWUF uf x y = (==) <$> rootWUF uf x <*> rootWUF uf y
 
 -- | 2要素の関係 A_y = s * A_x + o を取得する
 --
--- >>> uf <- newWUF @IOUArray (1, 3)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
 -- >>> uniteDiffWUF uf 1 2 5
 -- >>> relationWUF uf 1 2
 -- Just (1,5)
@@ -234,7 +234,7 @@ relationWUF uf x y = do
 
 -- | 要素の根に対するオフセットを返す（差分制約のみで使う場合は意味あり）
 --
--- >>> uf <- newWUF @IOUArray (1, 4)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,4)
 -- >>> uniteDiffWUF uf 1 2 3
 -- >>> uniteDiffWUF uf 2 3 5
 -- >>> getWeightWUF uf 3
@@ -251,7 +251,7 @@ getWeightWUF uf x = do
 
 -- | 連結成分数を返す
 --
--- >>> uf <- newWUF @IOUArray (1, 5)
+-- >>> uf <- newWUF @IOUArray (1 :: Int,5)
 -- >>> countWUF uf
 -- 5
 -- >>> uniteDiffWUF uf 1 2 0

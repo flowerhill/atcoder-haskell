@@ -8,6 +8,10 @@ import Data.Array.IArray (Array, listArray, (!))
 import Data.Array.MArray (MArray, newArray, readArray, writeArray)
 import Data.Ix (Ix, index, range, rangeSize)
 
+-- $setup
+-- >>> import Control.Monad.ST (runST)
+-- >>> import Data.Array.ST (STUArray)
+
 -- | UnionFind: 内部 storage は flat Int、API は任意の Ix index。
 --
 -- STUArray を使えば parent も size も unboxed のまま、(Int,Int) 等の
@@ -21,7 +25,6 @@ data UnionFind arr s i = UnionFind
 
 -- | Union-Find を初期化する（各要素が独立した集合）
 --
--- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); getRoot uf (1,1) }
 -- (1,1)
 newUF :: (Ix i, MArray (arr s) Int (ST s)) => (i, i) -> ST s (UnionFind arr s i)
