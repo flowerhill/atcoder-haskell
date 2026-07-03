@@ -232,7 +232,55 @@ relationWUF uf x y = do
           !o = oy - s * ox
       return $ Just (s, o)
 
--- | 要素の根に対するオフセットを返す（差分制約のみで使う場合は意味あり）
+-- | A_y - A_x が確定していれば返す（同集合かつ s==1 のとき Just）
+-- uniteDiffWUF と対になる読み出し。s==-1（和制約）で結ばれている場合は Nothing。
+--
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
+-- >>> uniteDiffWUF uf 1 2 5
+-- >>> diffWUF uf 1 2
+-- Just 5
+-- >>> uniteSumWUF uf 2 3 10
+-- >>> diffWUF uf 1 3
+-- Nothing
+diffWUF ::
+  forall arr m i.
+  (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
+  WeightedUnionFind arr (PrimState m) i ->
+  i ->
+  i ->
+  m (Maybe Int)
+diffWUF uf x y = do
+  rel <- relationWUF uf x y
+  return $ case rel of
+    Just (1, o) -> Just o
+    _ -> Nothing
+
+-- | A_x + A_y が確定していれば返す（同集合かつ s==-1 のとき Just）
+-- uniteSumWUF と対になる読み出し。s==1（差分制約）で結ばれている場合は Nothing。
+--
+-- >>> uf <- newWUF @IOUArray (1 :: Int,3)
+-- >>> uniteSumWUF uf 1 2 10
+-- >>> sumWUF uf 1 2
+-- Just 10
+-- >>> uniteSumWUF uf 2 3 4  -- 和制約を重ねると符号が +1 に戻り、1-3 は差分制約になる
+-- >>> sumWUF uf 1 3
+-- Nothing
+sumWUF ::
+  forall arr m i.
+  (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
+  WeightedUnionFind arr (PrimState m) i ->
+  i ->
+  i ->
+  m (Maybe Int)
+sumWUF uf x y = do
+  rel <- relationWUF uf x y
+  return $ case rel of
+    Just (-1, o) -> Just o
+    _ -> Nothing
+
+-- | 要素の根に対するオフセットを返す（差分制約のみで使う場合に意味を持つ）
+-- 注意: 和制約 (uniteSumWUF) が混在した集合では符号の解釈が曖昧になるため、
+-- 差分制約のみで運用しているときだけ使うこと。
 --
 -- >>> uf <- newWUF @IOUArray (1 :: Int,4)
 -- >>> uniteDiffWUF uf 1 2 3
