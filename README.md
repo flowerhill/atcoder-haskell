@@ -7,6 +7,7 @@ AtCoder競技プログラミング用のHaskellプロジェクトテンプレー
 - `cabal` (Haskell build tool)
 - `oj` (online-judge-tools)
 - `acc` (atcoder-cli)
+- `ormolu` (Haskell formatter) — `make format` / `make bundle` で提出ファイルの整形に使用。`brew install ormolu` 等で導入
 
 ## 🚀 セットアップ
 
@@ -61,18 +62,29 @@ acc config default-template atcoder-haskell
 | `make test`     | サンプルケースでのテスト実行       |
 | `make test-debug` | デバッグモードでテスト実行        |
 | `make test-case CASE=N` | 特定のテストケースを実行 |
-| `make test-bundle` | バンドルファイルでテスト実行     |
+| `make test-bundle` | サンプルテスト + 提出ファイル作成 |
 | `make unit-test` | ユニットテスト実行               |
 | `make doctest`  | 各モジュールの doctest を実行       |
 | `make test-all` | サンプルテスト + doctest           |
+
+### 提出ファイル作成
+
+| コマンド         | 説明                        |
+| --------------- | --------------------------- |
+| `make gen-bundle` | ファイルを結合するだけ（整形・検査なし） |
+| `make format`   | 提出ファイルを ormolu で整形（要 ormolu） |
+| `make verify-bundle` | 提出ファイルを型検査（`ghc -fno-code`） |
+| `make bundle`   | 結合 → 整形 → 型検査 をまとめて実行 |
 
 ### 提出関連
 
 | コマンド         | 説明                        |
 | --------------- | --------------------------- |
-| `make submit`   | テスト後にaccで提出（推奨） |
+| `make submit-file` | テスト + 提出ファイル作成まで（手動提出用） |
+| `make submit`   | テスト後にaccで提出         |
 | `make submit-oj` | ojコマンドで提出           |
-| `make bundle`   | ファイルを結合して提出用ファイル作成 |
+
+> **Note**: `acc submit` は内部で `oj`（online-judge-tools）を使うため、`oj` の提出が壊れていると `make submit` / `make submit-oj` の両方が失敗します。その場合は `make submit-file` で `dist/Submit.hs` を用意し、AtCoder の Web から手動で提出してください。
 
 ## 📝 開発フロー
 
