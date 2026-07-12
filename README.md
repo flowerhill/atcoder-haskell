@@ -4,8 +4,8 @@ AtCoder競技プログラミング用のHaskellプロジェクトテンプレー
 
 ## 📋 必要なツール
 
-- `cabal` (Haskell build tool)
-- `oj` (online-judge-tools)
+- `ghc` 9.8.4 / `cabal` (Haskell build tool) — 下記の Nix flake で導入できる
+- `oj` (online-judge-tools) — 同上
 - `acc` (atcoder-cli)
 - `ormolu` (Haskell formatter) — `make format` / `make bundle` で提出ファイルの整形に使用。`brew install ormolu` 等で導入
 
@@ -17,6 +17,20 @@ cp -r atcoder-haskell `acc config-dir`/
 # default-templateに設定 (お好みで)
 acc config default-template atcoder-haskell
 ```
+
+### Nix + direnv で環境構築
+
+GHC 9.8.4 / cabal / haskell-language-server / oj は同梱の `flake.nix` で一括管理できる。
+`flake.nix` / `flake.lock` / `.envrc` をコンテスト用ルートディレクトリ（`acc new` を実行する場所）にコピーして direnv を許可する:
+
+```bash
+cp flake.nix flake.lock .envrc ~/dev/atcoder/   # ルートは例
+direnv allow ~/dev/atcoder
+```
+
+direnv は親ディレクトリの `.envrc` を遡って見つけるため、ルート 1 か所に置けば配下の全タスクディレクトリで環境が自動で有効になる。この理由から、これらのファイルは意図的に `template.json` の `static` に含めていない（各タスクへはコピーされない）。
+
+個人用の環境変数は同じ場所に `.envrc.local` を作って書く（`.envrc` が自動で読み込む。git には含めない）。Nix を使わない場合は ghcup 等で GHC 9.8.4 / cabal を用意してもよい。
 
 ## 📁 プロジェクト構成
 

@@ -2,3 +2,6 @@ dist
 dist-newstyle
 venv
 .DS_Store
+.envrc.local
+.env
+.direnv/
