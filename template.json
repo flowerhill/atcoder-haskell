@@ -1,6 +1,8 @@
 {
   "task": {
-    "program": ["dist/Submit.hs"],
+    "program": [
+      "dist/Submit.hs"
+    ],
     "submit": "dist/Submit.hs",
     "static": [
       "atcoder-haskell.cabal",
@@ -10,8 +12,10 @@
       "dist",
       "spec",
       "Makefile",
+      "scripts",
       "tools",
-      ".gitignore"
+      ".gitignore",
+      "SKILL.md"
     ],
     "testdir": "test"
   }
