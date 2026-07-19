@@ -29,6 +29,15 @@ euclidDistFromInt (x1, y1) (x2, y2) = sqrt $ (fromIntegral x1 - fromIntegral x2)
 euclidDistFromInt2 :: (Int, Int) -> (Int, Int) -> Int
 euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
+-- | 2次元ベクトルの外積（z成分）。0 なら2ベクトルは平行
+--
+-- >>> cross (1, 0) (0, 1 :: Int)
+-- 1
+-- >>> cross (2, 4) (1, 2 :: Int)
+-- 0
+cross :: (Num a) => (a, a) -> (a, a) -> a
+cross (x1, y1) (x2, y2) = x1 * y2 - y1 * x2
+
 -- | 極座標 (r, θ) を直交座標 (x, y) に変換する
 --   x = r cos θ, y = r sin θ
 --
