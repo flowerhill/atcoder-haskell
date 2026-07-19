@@ -8,28 +8,7 @@ module Geometry where
 manhattanDistance :: (Num a) => (a, a) -> (a, a) -> a
 manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 
--- | ユークリッド距離を求める
---
--- >>> euclidDistance (0.0, 0.0) (3.0, 4.0 :: Double)
--- 5.0
-euclidDistance :: (Floating a) => (a, a) -> (a, a) -> a
-euclidDistance (x1, y1) (x2, y2) = sqrt $ (x1 - x2) ^ 2 + (y1 - y2) ^ 2
-
--- | 整数座標間のユークリッド距離（Float）
---
--- >>> euclidDistFromInt (0, 0) (3, 4)
--- 5.0
-euclidDistFromInt :: (Int, Int) -> (Int, Int) -> Float
-euclidDistFromInt (x1, y1) (x2, y2) = sqrt $ (fromIntegral x1 - fromIntegral x2) ^ 2 + (fromIntegral y1 - fromIntegral y2) ^ 2
-
--- | 整数座標間のユークリッド距離の2乗（sqrt なし）
---
--- >>> euclidDistFromInt2 (0, 0) (3, 4)
--- 25
-euclidDistFromInt2 :: (Int, Int) -> (Int, Int) -> Int
-euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
-
--- | ユークリッド距離の2乗（sqrt なし）の多相版。
+-- | ユークリッド距離の2乗（sqrt なし）。距離の等値比較にはこちらを使う。
 -- 座標が 2×10^9 を超えると 2 乗が Int を溢れるので、その場合は Integer で使う
 --
 -- >>> euclidDist2 (0, 0) (3, 4 :: Int)
@@ -39,8 +18,8 @@ euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 euclidDist2 :: (Num a) => (a, a) -> (a, a) -> a
 euclidDist2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
--- | ユークリッド距離の多相版。任意の実数型座標を受けて Double で返す。
--- 距離の等値比較には誤差の出ないこの関数ではなく euclidDist2 を使うこと
+-- | ユークリッド距離。任意の実数型座標を受けて Double で返す。
+-- 丸め誤差が出るので、距離の等値比較には euclidDist2 を使うこと
 --
 -- >>> euclidDist (0, 0) (3, 4 :: Int)
 -- 5.0
