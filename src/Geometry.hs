@@ -39,6 +39,16 @@ euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 euclidDist2 :: (Num a) => (a, a) -> (a, a) -> a
 euclidDist2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
+-- | ユークリッド距離の多相版。任意の実数型座標を受けて Double で返す。
+-- 距離の等値比較には誤差の出ないこの関数ではなく euclidDist2 を使うこと
+--
+-- >>> euclidDist (0, 0) (3, 4 :: Int)
+-- 5.0
+-- >>> euclidDist (0.5, 0) (2.0, 2.0 :: Double)
+-- 2.5
+euclidDist :: (Real a) => (a, a) -> (a, a) -> Double
+euclidDist (x1, y1) (x2, y2) = sqrt $ euclidDist2 (realToFrac x1, realToFrac y1) (realToFrac x2, realToFrac y2)
+
 -- | 2次元ベクトルの外積（z成分）。0 なら2ベクトルは平行
 --
 -- >>> cross (1, 0) (0, 1 :: Int)
