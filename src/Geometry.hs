@@ -29,6 +29,16 @@ euclidDistFromInt (x1, y1) (x2, y2) = sqrt $ (fromIntegral x1 - fromIntegral x2)
 euclidDistFromInt2 :: (Int, Int) -> (Int, Int) -> Int
 euclidDistFromInt2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
+-- | ユークリッド距離の2乗（sqrt なし）の多相版。
+-- 座標が 2×10^9 を超えると 2 乗が Int を溢れるので、その場合は Integer で使う
+--
+-- >>> euclidDist2 (0, 0) (3, 4 :: Int)
+-- 25
+-- >>> euclidDist2 (0, 0) (4000000000, 3000000000 :: Integer)
+-- 25000000000000000000
+euclidDist2 :: (Num a) => (a, a) -> (a, a) -> a
+euclidDist2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
+
 -- | 2次元ベクトルの外積（z成分）。0 なら2ベクトルは平行
 --
 -- >>> cross (1, 0) (0, 1 :: Int)
