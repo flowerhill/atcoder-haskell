@@ -4,7 +4,7 @@
 module ModInt where
 
 import qualified Data.List as L
-import Math (exEuclid, sumOfArith)
+import Math (exEuclid, sumOfRange)
 
 modulus :: Int
 modulus = 1000000007
@@ -98,7 +98,8 @@ toIntMod a = IntMod (a `mod` modulus)
 
 -- | 等比数列の和 (mod 10^9+7): 初項 a, 公比 r, 項数 n
 -- a * (r^n - 1) / (r - 1) を mod 10^9+7 で計算
--- r == 1 の場合は a * n を返す
+-- 分母が 0 になる r ≡ 1 (mod 10^9+7) の場合は総和が a * n なので先に分岐する
+-- （modulus は素数なので、それ以外は逆元が存在する）
 --
 -- >>> sumOfGeoMod 1 2 4
 -- 15
@@ -106,9 +107,11 @@ toIntMod a = IntMod (a `mod` modulus)
 -- 39
 -- >>> sumOfGeoMod 1 1 5
 -- 5
+-- >>> sumOfGeoMod 3 (modulus + 1) 5
+-- 15
 sumOfGeoMod :: Int -> Int -> Int -> Int
 sumOfGeoMod a r n
-  | r == 1 = a `mulMod` (n `mod` modulus)
+  | r `mod` modulus == 1 = a `mulMod` (n `mod` modulus)
   | otherwise = a `mulMod` ((powMod r n `subMod` 1) `divMod2` ((r - 1) `mod` modulus))
 
 -- | 等差数列の和 (mod 10^9+7): a から b までの公差1の整数の総和
@@ -118,7 +121,7 @@ sumOfGeoMod a r n
 -- >>> sumOfArithMod 1 100000
 -- 49965
 sumOfArithMod :: Integer -> Integer -> Int
-sumOfArithMod a b = fromInteger $ sumOfArith a b `mod` fromIntegral modulus
+sumOfArithMod a b = fromInteger $ sumOfRange a b `mod` fromIntegral modulus
 
 -- | mod 10^9+7 のモジュラ逆数（拡張ユークリッド利用）
 --

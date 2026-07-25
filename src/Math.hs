@@ -163,23 +163,63 @@ exEuclid = fn 1 0 0 1
           let (q, r) = a `divMod` b
            in fn s' t' (s - q * s') (t - q * t') b r
 
--- | 等比数列の和: a * (r^n - 1) / (r - 1)
+-- | 等比数列の和: 初項 a, 公比 r, 項数 n の総和 a + ar + .. + ar^(n-1)。O(n)
+--
+-- 公式 a*(r^n - 1)/(r - 1) は r == 1 で 0 除算になり r^n も溢れやすいので、
+-- ホーナー法 s <- s*r + a で 1 項ずつ畳み込む（途中の値は常に答え以下）。
+-- mod を取るなら "ModInt" の sumOfGeoMod を使う。
 --
 -- >>> sumOfGeo 1 2 4
 -- 15
 -- >>> sumOfGeo 3 3 3
 -- 39
+-- >>> sumOfGeo 3 1 5
+-- 15
+-- >>> sumOfGeo 1 (-2) 4
+-- -5
+-- >>> sumOfGeo 7 2 0
+-- 0
 sumOfGeo :: (Integral a, Integral b) => a -> a -> b -> a
-sumOfGeo a r n = a * (r ^ n - 1) `div` (r - 1)
+sumOfGeo a r n = L.foldl' (\s _ -> s * r + a) 0 [1 .. n]
 
--- | 等差数列の和: a から b までの公差1の整数の総和 (a+b)*(b-a+1)/2
+-- | 等差数列の和: 初項 a, 公差 d, 項数 n の総和 n*a + d*n(n-1)/2
 --
--- >>> sumOfArith 1 10
+-- n(n-1) を作る前に偶数側を 2 で割るので、答えが型に収まる限り途中で溢れない。
+-- 区間 [a, b] の総和（公差1）は "sumOfRange" を使う。
+--
+-- >>> sumOfArith 1 1 10
 -- 55
--- >>> sumOfArith 3 5
+-- >>> sumOfArith 2 3 4
+-- 26
+-- >>> sumOfArith 3 (-2) 4
+-- 0
+-- >>> sumOfArith 5 0 3
+-- 15
+-- >>> sumOfArith 7 2 0
+-- 0
+sumOfArith :: (Integral a, Integral b) => a -> a -> b -> a
+sumOfArith a d n
+  | n <= 0 = 0
+  | otherwise = a * n' + d * steps
+  where
+    n' = fromIntegral n
+    -- n(n-1)/2 = 0+1+..+(n-1)。n と n-1 の偶数側を先に 2 で割る
+    steps
+      | even n' = (n' `div` 2) * (n' - 1)
+      | otherwise = n' * ((n' - 1) `div` 2)
+
+-- | 等差数列（公差1）の和: 区間 [a, b] の整数の総和。空区間 (a > b) は 0
+--
+-- >>> sumOfRange 1 10
+-- 55
+-- >>> sumOfRange 3 5
 -- 12
-sumOfArith :: (Integral a) => a -> a -> a
-sumOfArith a b = (a + b) * (b - a + 1) `div` 2
+-- >>> sumOfRange 7 7
+-- 7
+-- >>> sumOfRange 5 3
+-- 0
+sumOfRange :: (Integral a) => a -> a -> a
+sumOfRange a b = sumOfArith a 1 (b - a + 1)
 
 -- | 整数の平方根を求める（ニュートン法、精度保証あり）
 --
