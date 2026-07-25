@@ -2,6 +2,8 @@ module MyList where
 
 import Control.Monad.State (StateT (StateT, runStateT))
 import Data.List (find, findIndex, foldl', inits, sort, tails)
+import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Intro as VAI
 
 {--  リスト走査 --}
 
@@ -181,32 +183,46 @@ indexed = zip [1 ..]
 
 {-- リスト変換・生成 --}
 
--- | クイックソート
+-- | クイックソート（Vector 上のイントロソート）。O(N log N)
+--
+-- リストの分割統治版はピボットが偏ると O(N^2) に落ち、途中リストも大量に確保する。
+-- Vector に載せて in-place のイントロソート（quicksort + 深くなったら heapsort）を
+-- かけるので、最悪でも O(N log N) で確保も 1 本分で済む。
+--
+-- NOTE: 安定ソートではない（同値要素の相対順は保たれない）。
+-- 安定性が要るなら "Data.List".@sortOn@ を使うこと。
 --
 -- >>> quicksort [3,1,4,1,5,9,2,6 :: Int]
 -- [1,1,2,3,4,5,6,9]
 -- >>> quicksort ([] :: [Int])
 -- []
+-- >>> quicksort "haskell"
+-- "aehklls"
 quicksort :: (Ord a) => [a] -> [a]
-quicksort [] = []
-quicksort (x : xs) =
-  let smallerSorted = quicksort [a | a <- xs, a <= x]
-      biggerSorted = quicksort [a | a <- xs, a > x]
-   in smallerSorted ++ [x] ++ biggerSorted
+quicksort = V.toList . V.modify VAI.sort . V.fromList
 
--- | リストのi番目とj番目の要素を入れ替える
+-- | リストのi番目とj番目の要素を入れ替える。範囲外の添字を含むならそのまま返す。
+--
+-- splitAt を 2 回かけて 4 本のリストを繋ぎ直す代わりに Vector に載せて 2 点だけ
+-- 書き換える。i > j でも i == j でも同じ式で通る。
 --
 -- >>> swapList 0 2 [1,2,3 :: Int]
 -- [3,2,1]
 -- >>> swapList 1 3 [1,2,3,4,5 :: Int]
 -- [1,4,3,2,5]
+-- >>> swapList 3 1 [1,2,3,4,5 :: Int]
+-- [1,4,3,2,5]
+-- >>> swapList 1 1 [1,2,3 :: Int]
+-- [1,2,3]
+-- >>> swapList 0 9 [1,2,3 :: Int]
+-- [1,2,3]
 swapList :: Int -> Int -> [a] -> [a]
 swapList i j xs
-  | i < 0 || i >= length xs || j < 0 || j >= length xs = xs
-  | otherwise =
-      let (ys, x : zs) = splitAt i xs
-          (ws, y : vs) = splitAt (j - i - 1) zs
-       in ys ++ [y] ++ ws ++ [x] ++ vs
+  | not (inBnds i) || not (inBnds j) = xs
+  | otherwise = V.toList $ v V.// [(i, v V.! j), (j, v V.! i)]
+  where
+    v = V.fromList xs
+    inBnds k = k >= 0 && k < V.length v
 
 -- | 重複なしの全順列を生成する
 --
@@ -286,13 +302,24 @@ updateWhere pred newVal (x : xs)
   | pred x = newVal : updateWhere pred newVal xs
   | otherwise = x : updateWhere pred newVal xs
 
--- | 複数の (インデックス, 値) ペアでリストを一括更新する
+-- | 複数の (インデックス, 値) ペアでリストを一括更新する。O(N + K)
+--
+-- updateAt を K 回重ねると O(N*K) かかるので、Vector に載せて 1 回の (//) で
+-- まとめて書き換える。範囲外の添字は updateAt 版と同じく無視する。
+-- 同じ添字が複数あれば後勝ち（これも updateAt を畳んだときと同じ）。
 --
 -- >>> updateMultiple [(0, 10), (2, 30)] [1,2,3 :: Int]
 -- [10,2,30]
+-- >>> updateMultiple [(5, 99), (-1, 99)] [1,2,3 :: Int]
+-- [1,2,3]
+-- >>> updateMultiple [(1, 20), (1, 99)] [1,2,3 :: Int]
+-- [1,99,3]
 updateMultiple :: [(Int, a)] -> [a] -> [a]
 updateMultiple [] xs = xs
-updateMultiple ((i, v) : updates) xs = updateMultiple updates (updateAt i v xs)
+updateMultiple updates xs = V.toList $ v V.// filter (inBnds . fst) updates
+  where
+    v = V.fromList xs
+    inBnds k = k >= 0 && k < V.length v
 
 -- | 条件を満たす要素数を数える
 --

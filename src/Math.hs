@@ -11,6 +11,8 @@ import Data.Array.ST (STUArray, newArray, readArray, runSTUArray, writeArray)
 import Data.Array.Unboxed (UArray)
 import qualified Data.IntSet as IS
 import qualified Data.List as L
+import qualified Data.Vector.Unboxed as VU
+import qualified Data.Vector.Unboxed.Mutable as VUM
 import Foreign (FiniteBits (countLeadingZeros, finiteBitSize))
 
 -- | 三分探索: 凸関数 f の最小値付近の区間 (l, r) を返す（r - l <= 2）
@@ -42,16 +44,34 @@ isPrime x = all (\n -> x `mod` n /= 0) lst
     xSqrt = floor (sqrt $ fromIntegral x :: Double) :: Int
     lst = [2 .. xSqrt]
 
--- | エラトステネスの篩: n以下の素数集合を返す
+-- | エラトステネスの篩: n以下の素数集合を返す。O(N log log N)
+--
+-- IntSet を p ごとに difference で削るとバランス木を何度も作り直すことになるので、
+-- 篩は Unboxed の Bool ベクタ上で潰し、最後に一度だけ IntSet に詰め替える。
+-- 合成数を弾くのは p が素数のときだけ、開始点も p*p でよい。
 --
 -- >>> IS.toList (sieve 20)
 -- [2,3,5,7,11,13,17,19]
+-- >>> IS.toList (sieve 1)
+-- []
+-- >>> IS.size (sieve 100)
+-- 25
 sieve :: Int -> IS.IntSet
-sieve n = go 2 (IS.fromList [2 .. n])
+sieve n
+  | n < 2 = IS.empty
+  | otherwise = IS.fromDistinctAscList [i | i <- [2 .. n], VU.unsafeIndex isPrime' i]
   where
-    go p s
-      | p * p > n = s
-      | otherwise = go (p + 1) (IS.difference s (IS.fromList [p * p, p * p + p .. n]))
+    isPrime' :: VU.Vector Bool
+    isPrime' = VU.create $ do
+      v <- VUM.replicate (n + 1) True
+      VUM.write v 0 False
+      VUM.write v 1 False
+      forM_ (takeWhile (\p -> p * p <= n) [2 ..]) $ \p -> do
+        prime <- VUM.read v p
+        when prime $
+          forM_ [p * p, p * p + p .. n] $ \q ->
+            VUM.write v q False
+      return v
 
 -- | Sieve: count distinct prime factors for each number up to n
 -- O(N log log N)

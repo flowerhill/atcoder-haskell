@@ -11,7 +11,7 @@ import Data.Array.IO
 import Data.Array.ST (STUArray, runSTUArray)
 import Data.Array.Unboxed (UArray)
 import qualified Data.Array.Unboxed as UA
-import qualified Data.List.Split as LS
+import qualified Data.Vector.Unboxed as VU
 
 {-- MArray --}
 
@@ -83,21 +83,28 @@ printMatrix arr = do
   let rows = [[arr UA.! (row, col) | col <- [minCol .. maxCol - 1]] | row <- [minRow .. maxRow - 1]]
   putStr $ unlines [unwords (map show row) | row <- rows]
 
--- | 2次元累積和を計算する（1始まりインデックス対応）
+-- | 2次元累積和を計算する。O(H*W)
+--
+-- 行を Vector の slice で切り出し、行内で横方向に scanl1、
+-- 直前の行の結果を zipWith (+) で足し込んで縦方向にも累積する。
+-- 行幅は bounds の列方向の幅から取るので 0 始まりでも 1 始まりでも通る。
 --
 -- >>> import Data.Array.Unboxed (listArray, (!))
 -- >>> let arr = listArray ((1,1),(2,2)) [1,2,3,4] :: UArray (Int,Int) Int
 -- >>> twoDimensionalSum arr ! (2,2)
 -- 10
+-- >>> let arr0 = listArray ((0,0),(1,1)) [1,2,3,4] :: UArray (Int,Int) Int
+-- >>> [twoDimensionalSum arr0 ! (i,j) | i <- [0..1], j <- [0..1]]
+-- [1,3,4,10]
 twoDimensionalSum :: UArray (Int, Int) Int -> UArray (Int, Int) Int
-twoDimensionalSum arr =
-  listArray bounds_ $
-    concat $
-      scanl1 (zipWith (+)) $
-        map (scanl1 (+)) lists
+twoDimensionalSum arr = listArray bounds_ $ VU.toList $ VU.concat rowSums
   where
-    bounds_ = bounds arr
-    lists = LS.chunksOf ((snd . snd) bounds_) $ elems arr
+    bounds_@((r0, c0), (r1, c1)) = bounds arr
+    h = r1 - r0 + 1
+    w = c1 - c0 + 1
+    src = VU.fromList $ elems arr
+    rows = [VU.slice (i * w) w src | i <- [0 .. h - 1]]
+    rowSums = scanl1 (VU.zipWith (+)) $ map (VU.scanl1 (+)) rows
 
 {-- MArray用 --}
 
@@ -241,16 +248,19 @@ lisLengths :: [Int] -> UArray Int Int
 lisLengths xs = runSTUArray $ do
   tails <- newArray (0, n - 1) maxBound :: ST s (STUArray s Int Int)
   result <- newArray (0, n - 1) 0 :: ST s (STUArray s Int Int)
-  let step len (i, x) = do
+  let step len i = do
+        let x = VU.unsafeIndex v i
         -- tails[0..len) のうち x 以上が初めて現れる位置 pos（無ければ len）
         (_, pos) <- bisectM (-1, len) $ \mid -> (>= x) <$> readArray tails mid
         writeArray tails pos x
         writeArray result i (pos + 1)
         return $ max len (pos + 1)
-  _ <- foldM step 0 (zip [0 ..] xs)
+  _ <- foldM step 0 [0 .. n - 1]
   return result
   where
-    n = length xs
+    -- 入力を一度だけ Vector に載せる（length の走査と zip のタプル確保を省く）
+    v = VU.fromList xs
+    n = VU.length v
 
 -- | 各位置 i から始まる最長減少部分列（狭義）の長さを返す (O(N log N))。
 -- 反転して LIS を取り、結果を反転して戻す。
