@@ -642,8 +642,12 @@ generateBundle mainMod localMods localModMap =
 
 -- | qualified なローカルimportの prefix（asがあればそれ、なければモジュール名）を抽出
 --
+-- Map は Data.Map.Strict なので、値に undefined を置くと fromList の時点で落ちる。
+-- キーの有無しか見ない関数だが、値には空モジュールを入れておくこと。
+--
+-- >>> let stub n = parseModule (n ++ ".hs") ("module " ++ n ++ " where")
 -- >>> let m = parseModule "X.hs" "module X where\nimport qualified Foo as F\nimport qualified Bar\nimport qualified Data.Map as DM"
--- >>> qualifiedLocalPrefixes (M.fromList [("Foo", undefined), ("Bar", undefined)]) m
+-- >>> qualifiedLocalPrefixes (M.fromList [("Foo", stub "Foo"), ("Bar", stub "Bar")]) m
 -- ["F","Bar"]
 -- >>> qualifiedLocalPrefixes M.empty (parseModule "X.hs" "module X where\nimport qualified Foo as F")
 -- []
@@ -691,7 +695,7 @@ stripQualifiers prefixes = foldr (.) id (map stripQualifier prefixes)
 
 -- | モジュールを展開（qualified なローカルimportの prefix を除去）
 --
--- >>> let mods = M.fromList [("Foo", undefined)]
+-- >>> let mods = M.fromList [("Foo", parseModule "Foo.hs" "module Foo where")]
 -- >>> let m = parseModule "Bar.hs" "module Bar where\nimport qualified Foo as F\nbar = F.foo + 1"
 -- >>> expandModule mods m
 -- ["","-- Bar","bar = foo + 1"]
