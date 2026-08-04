@@ -584,10 +584,24 @@ topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
                   (visited'', acc') = go visited' acc deps
                in go visited'' (info : acc') rest
 
+-- | 提出ファイルの先頭に貼るヘッダコメント（バンドル元ライブラリの GitHub リンク）
+--
+-- 提出コードを見た人がライブラリ本体を辿れるようにするためのもの。
+-- git 等の外部プロセスを起動するとバンドルのたびにコストがかかるので、定数で持つ。
+-- LANGUAGE プラグマより前にコメントを置くのは GHC 的に問題ない。
+--
+-- >>> bundleHeader
+-- ["-- https://github.com/flowerhill/atcoder-haskell"]
+bundleHeader :: [String]
+bundleHeader = ["-- https://github.com/flowerhill/atcoder-haskell"]
+
 -- | バンドル出力を生成
 --
 -- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
--- >>> lines (generateBundle m [] M.empty) !! 1
+-- >>> take 1 (lines (generateBundle m [] M.empty))
+-- ["-- https://github.com/flowerhill/atcoder-haskell"]
+-- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
+-- >>> lines (generateBundle m [] M.empty) !! 2
 -- "module Main where"
 -- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
 -- >>> last (lines (generateBundle m [] M.empty))
@@ -595,8 +609,11 @@ topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
 generateBundle :: ModuleInfo -> [ModuleInfo] -> M.Map String ModuleInfo -> String
 generateBundle mainMod localMods localModMap =
   unlines $
-    -- 1. 全プラグマを集約（LANGUAGEとOPTIONS_GHCのみ）
-    nub (concatMap modPragmas (mainMod : localMods))
+    -- 0. ライブラリの出典（提出コードから辿れるように）
+    bundleHeader
+      ++
+      -- 1. 全プラグマを集約（LANGUAGEとOPTIONS_GHCのみ）
+      nub (concatMap modPragmas (mainMod : localMods))
       ++ [""]
       ++
       -- 2. module Main where
