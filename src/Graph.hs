@@ -89,13 +89,16 @@ buildGW2 bnds edges = accumArray (flip (:)) [] bnds edges'
 -- BFS系関数（Data.Sequence版）
 -- =============================================================================
 
--- | BFS単始点版（immutable, Data.Sequence使用）
+-- | BFS 到達集合・単始点版（immutable）。
+--
+-- bounds が作れない頂点（盤面状態・文字列など）向け。
+-- bounds があるなら bfsReach の方が速い。
 --
 -- >>> import qualified Data.Set as S
--- >>> S.toList $ bfsSingleSource (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1
+-- >>> S.toList $ bfsImmutable (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1
 -- [1,2,3]
-bfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> a -> S.Set a
-bfsSingleSource getNext start = go S.empty (Seq.singleton start)
+bfsImmutable :: forall a. (Ord a) => (a -> [a]) -> a -> S.Set a
+bfsImmutable getNext start = go S.empty (Seq.singleton start)
   where
     go visited queue = case Seq.viewl queue of
       Seq.EmptyL -> visited
@@ -109,13 +112,16 @@ bfsSingleSource getNext start = go S.empty (Seq.singleton start)
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
--- | BFS複数始点版（immutable, Data.Sequence使用）
+-- | BFS 到達集合・複数始点版（immutable）。初期 visited を渡せる。
+--
+-- bounds が作れない頂点（盤面状態・文字列など）向け。
+-- bounds があるなら bfsReachMulti の方が速い。
 --
 -- >>> import qualified Data.Set as S
--- >>> S.toList $ bfs (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) S.empty [1,3]
+-- >>> S.toList $ bfsImmutableMulti (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) S.empty [1,3]
 -- [1,2,3,4]
-bfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
-bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
+bfsImmutableMulti :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
+bfsImmutableMulti getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
   where
     go visited queue = case Seq.viewl queue of
       Seq.EmptyL -> visited
@@ -129,15 +135,15 @@ bfs getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
                 queue' = rest Seq.>< Seq.fromList newNodes
              in go visited' queue'
 
--- | BFS単始点版（mutable, Data.Sequence使用）
+-- | BFS 到達判定・単始点版（mutable）。到達した頂点が True。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> bfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 3
+-- >>> bfsReach (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 3
 -- True
--- >>> bfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 4
+-- >>> bfsReach (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 4
 -- False
-bfsSingleSourceSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
-bfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
+bfsReach :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
+bfsReach bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
   queueRef <- newSTRef (Seq.singleton start)
 
@@ -159,15 +165,15 @@ bfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
                 loop
   loop
 
--- | BFS複数始点版（mutable, Data.Sequence使用）
+-- | BFS 到達判定・複数始点版（mutable）。到達した頂点が True。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> bfsRunSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) [1,3] ! 4
+-- >>> bfsReachMulti (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) [1,3] ! 4
 -- True
--- >>> bfsRunSTUArray (1,4) (\x -> []) [1] ! 2
+-- >>> bfsReachMulti (1,4) (\x -> []) [1] ! 2
 -- False
-bfsRunSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
-bfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
+bfsReachMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
+bfsReachMulti bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
   queueRef <- newSTRef (Seq.fromList initNodes)
 
@@ -189,15 +195,15 @@ bfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
                 loop
   loop
 
--- | BFS最短経路単始点版（mutable, Data.Sequence使用）
+-- | BFS 最短距離・単始点版（mutable）。未到達は -1。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> bfsShortestPathSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> [3]; 3 -> [4]; _ -> []) 1 ! 4
+-- >>> bfs (1,4) (\x -> case x of 1 -> [2]; 2 -> [3]; 3 -> [4]; _ -> []) 1 ! 4
 -- 3
--- >>> bfsShortestPathSTUArray (1,4) (\x -> []) 1 ! 4
+-- >>> bfs (1,4) (\x -> []) 1 ! 4
 -- -1
-bfsShortestPathSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Int
-bfsShortestPathSTUArray bnds getNext start = runSTUArray $ do
+bfs :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Int
+bfs bnds getNext start = runSTUArray $ do
   distance <- newArray bnds (-1)
   queueRef <- newSTRef (Seq.singleton start)
   writeArray distance start 0
@@ -224,13 +230,13 @@ bfsShortestPathSTUArray bnds getNext start = runSTUArray $ do
             loop
   loop
 
--- | BFS最短経路複数始点版（mutable, Data.Sequence使用）
+-- | BFS 最短距離・複数始点版（mutable）。未到達は -1。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> bfsMultiSourceShortestPath (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
+-- >>> bfsMulti (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
 -- 1
-bfsMultiSourceShortestPath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Int
-bfsMultiSourceShortestPath bnds getNext starts = runSTUArray $ do
+bfsMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Int
+bfsMulti bnds getNext starts = runSTUArray $ do
   distance <- newArray bnds (-1)
   queueRef <- newSTRef (Seq.fromList starts)
 
@@ -265,10 +271,10 @@ bfsMultiSourceShortestPath bnds getNext starts = runSTUArray $ do
 -- 計算量: O(V + E)
 --
 -- 使用例:
---   let dist = bfs01ST nextStates (0, maxState) [start]
+--   let dist = bfs01 nextStates (0, maxState) [start]
 --   where nextStates v = [(u, 0_or_1), ...]
-bfs01ST :: forall a. (Ix a) => (a -> [(a, Int)]) -> (a, a) -> [a] -> UArray a Int
-bfs01ST nextStates (lower, upper) v0s = runSTUArray $ do
+bfs01 :: forall a. (Ix a) => (a -> [(a, Int)]) -> (a, a) -> [a] -> UArray a Int
+bfs01 nextStates (lower, upper) v0s = runSTUArray $ do
   dist <- newArray (lower, upper) maxBound
   dequeRef <- newSTRef Seq.empty
 
@@ -300,42 +306,48 @@ bfs01ST nextStates (lower, upper) v0s = runSTUArray $ do
 -- DFS系関数（汎用化版）
 -- =============================================================================
 
--- | DFS単始点版（immutable）
+-- | DFS 到達集合・単始点版（immutable）。
+--
+-- bounds が作れない頂点（盤面状態・文字列など）向け。
+-- bounds があるなら dfsReach の方が速い。
 --
 -- >>> import qualified Data.Set as S
--- >>> S.toList $ dfsSingleSource (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) S.empty 1
+-- >>> S.toList $ dfsImmutable (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) S.empty 1
 -- [1,2,3]
-dfsSingleSource :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> a -> S.Set a
-dfsSingleSource getNext visited start
+dfsImmutable :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> a -> S.Set a
+dfsImmutable getNext visited start
   | S.member start visited = visited
   | otherwise =
       let visited' = S.insert start visited
           neighbors = getNext start
-       in foldl' (dfsSingleSource getNext) visited' neighbors
+       in foldl' (dfsImmutable getNext) visited' neighbors
 
--- | DFS複数始点版（immutable）
+-- | DFS 到達集合・複数始点版（immutable）。初期 visited を渡せる。
+--
+-- bounds が作れない頂点（盤面状態・文字列など）向け。
+-- bounds があるなら dfsReachMulti の方が速い。
 --
 -- >>> import qualified Data.Set as S
--- >>> S.toList $ dfs (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) S.empty [1,3]
+-- >>> S.toList $ dfsImmutableMulti (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) S.empty [1,3]
 -- [1,2,3,4]
-dfs :: forall a. (Ix a, Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
-dfs _ visited [] = visited
-dfs getNext visited (curr : rest)
-  | S.member curr visited = dfs getNext visited rest
+dfsImmutableMulti :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
+dfsImmutableMulti _ visited [] = visited
+dfsImmutableMulti getNext visited (curr : rest)
+  | S.member curr visited = dfsImmutableMulti getNext visited rest
   | otherwise =
       let visited' = S.insert curr visited
           neighbors = getNext curr
-       in dfs getNext visited' (neighbors ++ rest)
+       in dfsImmutableMulti getNext visited' (neighbors ++ rest)
 
--- | DFS単始点版（mutable）
+-- | DFS 到達判定・単始点版（mutable）。到達した頂点が True。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> dfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) 1 ! 3
+-- >>> dfsReach (1,4) (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) 1 ! 3
 -- True
--- >>> dfsSingleSourceSTUArray (1,4) (\x -> case x of 1 -> [2]; 2 -> []; _ -> []) 1 ! 4
+-- >>> dfsReach (1,4) (\x -> case x of 1 -> [2]; 2 -> []; _ -> []) 1 ! 4
 -- False
-dfsSingleSourceSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
-dfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
+dfsReach :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
+dfsReach bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
   stackRef <- newSTRef [start]
 
@@ -355,15 +367,15 @@ dfsSingleSourceSTUArray bnds getNext start = runSTUArray $ do
                 loop
   loop
 
--- | DFS複数始点版（mutable）
+-- | DFS 到達判定・複数始点版（mutable）。到達した頂点が True。
 --
 -- >>> import Data.Array.Unboxed ((!))
--- >>> dfsRunSTUArray (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
+-- >>> dfsReachMulti (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
 -- True
--- >>> dfsRunSTUArray (1,4) (\x -> []) [1] ! 2
+-- >>> dfsReachMulti (1,4) (\x -> []) [1] ! 2
 -- False
-dfsRunSTUArray :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
-dfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
+dfsReachMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
+dfsReachMulti bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
   stackRef <- newSTRef initNodes
 
@@ -386,14 +398,14 @@ dfsRunSTUArray bnds getNext initNodes = runSTUArray $ do
 -- 各ノードへの経路を返す（未訪問は空リスト）
 data PathNode a = PathNode a [a]
 
--- | DFS複数始点版・経路付き（mutable）
+-- | DFS 木・複数始点版（mutable）。各頂点への DFS 経路を返す（未訪問は空リスト）。
 --
--- >>> dfsRunSTUArrayWithPath (1,3) (\x -> case x of 1 -> [2,3]; _ -> []) [1] ! 2
+-- >>> dfsTree (1,3) (\x -> case x of 1 -> [2,3]; _ -> []) [1] ! 2
 -- [1,2]
--- >>> dfsRunSTUArrayWithPath (1,3) (\x -> []) [1] ! 3
+-- >>> dfsTree (1,3) (\x -> []) [1] ! 3
 -- []
-dfsRunSTUArrayWithPath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> Array a [a]
-dfsRunSTUArrayWithPath bnds getNext initNodes = runSTArray do
+dfsTree :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> Array a [a]
+dfsTree bnds getNext initNodes = runSTArray do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   paths <- newArray bnds [] :: ST s (STArray s a [a])
   stackRef <- newSTRef $ map (\x -> PathNode x [x]) initNodes
@@ -431,17 +443,17 @@ countComponentsDFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   count <- newSTRef 0
 
-  let dfs v = do
+  let go v = do
         seen <- readArray visited v
         unless seen $ do
           writeArray visited v True
-          mapM_ dfs (filter (inRange bnds) (getNext v))
+          mapM_ go (filter (inRange bnds) (getNext v))
 
   forM_ (range bnds) $ \v -> do
     seen <- readArray visited v
     unless seen $ do
       modifySTRef' count (+ 1)
-      dfs v
+      go v
 
   readSTRef count
 
@@ -454,7 +466,7 @@ countComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   count <- newSTRef 0
 
-  let bfs startV = do
+  let go startV = do
         queue <- newSTRef (Seq.singleton startV)
         writeArray visited startV True
 
@@ -480,7 +492,7 @@ countComponentsBFS bnds getNext = runST $ do
     seen <- readArray visited v
     unless seen $ do
       modifySTRef' count (+ 1)
-      bfs v
+      go v
 
   readSTRef count
 
@@ -493,18 +505,18 @@ getComponentsDFS bnds getNext = runST do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   components <- newSTRef []
 
-  let dfs v acc = do
+  let go v acc = do
         seen <- readArray visited v
         if not seen
           then do
             writeArray visited v True
-            foldM (flip dfs) (v : acc) (filter (inRange bnds) (getNext v))
+            foldM (flip go) (v : acc) (filter (inRange bnds) (getNext v))
           else return acc
 
   forM_ (range bnds) $ \v -> do
     seen <- readArray visited v
     unless seen $ do
-      component <- dfs v []
+      component <- go v []
       unless (null component) $
         modifySTRef' components (component :)
 
@@ -519,7 +531,7 @@ getComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   components <- newSTRef []
 
-  let bfs startV = do
+  let go startV = do
         queue <- newSTRef (Seq.singleton startV)
         component <- newSTRef []
         writeArray visited startV True
@@ -553,7 +565,7 @@ getComponentsBFS bnds getNext = runST $ do
   forM_ (range bnds) $ \v -> do
     seen <- readArray visited v
     unless seen $ do
-      component <- bfs v
+      component <- go v
       modifySTRef' components (component :)
 
   readSTRef components
@@ -587,16 +599,16 @@ getComponentSize bnds getNext v = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
   size <- newSTRef 0
 
-  let dfs u = do
+  let go u = do
         seen <- readArray visited u
         unless seen $ do
           writeArray visited u True
           modifySTRef' size (+ 1)
-          mapM_ dfs (filter (inRange bnds) (getNext u))
+          mapM_ go (filter (inRange bnds) (getNext u))
 
   if inRange bnds v
     then do
-      dfs v
+      go v
       readSTRef size
     else return 0
 
@@ -614,15 +626,15 @@ isConnected bnds getNext u v
       visited <- newArray bnds False :: ST s (STUArray s a Bool)
       found <- newSTRef False
 
-      let dfs curr = do
+      let go curr = do
             when (curr == v) $ writeSTRef found True
             seen <- readArray visited curr
             foundFlag <- readSTRef found
             when (not seen && not foundFlag) $ do
               writeArray visited curr True
-              mapM_ dfs (filter (inRange bnds) (getNext curr))
+              mapM_ go (filter (inRange bnds) (getNext curr))
 
-      dfs u
+      go u
       readSTRef found
 
 -- =============================================================================
@@ -769,17 +781,17 @@ countGridComponentsDFS grid targetChar getNext = runST $ do
 
   let targetPositions = [pos | pos <- range bnds', grid ! pos == targetChar]
 
-  let dfs v = do
+  let go v = do
         seen <- readArray visited v
         unless seen $ do
           writeArray visited v True
-          mapM_ dfs (getNext v)
+          mapM_ go (getNext v)
 
   forM_ targetPositions $ \pos -> do
     seen <- readArray visited pos
     unless seen $ do
       modifySTRef' count (+ 1)
-      dfs pos
+      go pos
 
   readSTRef count
 
@@ -797,7 +809,7 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
 
   let targetPositions = [pos | pos <- range bnds', grid ! pos == targetChar]
 
-  let bfs startV = do
+  let go startV = do
         queue <- newSTRef (Seq.singleton startV)
         writeArray visited startV True
 
@@ -823,7 +835,7 @@ countGridComponentsBFS grid targetChar getNext = runST $ do
     seen <- readArray visited pos
     unless seen $ do
       modifySTRef' count (+ 1)
-      bfs pos
+      go pos
 
   readSTRef count
 
