@@ -584,37 +584,50 @@ topSort mods = reverse $ snd $ go S.empty [] (M.keys mods)
                   (visited'', acc') = go visited' acc deps
                in go visited'' (info : acc') rest
 
--- | 提出ファイルの先頭に貼るヘッダコメント（バンドル元ライブラリの GitHub リンク）
+-- | module 宣言の直前に貼るヘッダコメント（バンドル元ライブラリの GitHub リンク）
 --
 -- 提出コードを見た人がライブラリ本体を辿れるようにするためのもの。
 -- git 等の外部プロセスを起動するとバンドルのたびにコストがかかるので、定数で持つ。
--- LANGUAGE プラグマより前にコメントを置くのは GHC 的に問題ない。
+-- ファイル先頭ではなくプラグマ群の後ろに置く。LANGUAGE プラグマの前にコメントが
+-- あると、処理系やツールによってはプラグマとして解釈されて壊れるため。
 --
--- >>> bundleHeader
--- ["-- https://github.com/flowerhill/atcoder-haskell"]
+-- 日本語を含むので、doctest では show ではなく putStrLn で比較する。
+--
+-- >>> mapM_ putStrLn bundleHeader
+-- -- ライブラリのソース: https://github.com/flowerhill/atcoder-haskell
 bundleHeader :: [String]
-bundleHeader = ["-- https://github.com/flowerhill/atcoder-haskell"]
+bundleHeader = ["-- ライブラリのソース: https://github.com/flowerhill/atcoder-haskell"]
 
 -- | バンドル出力を生成
 --
--- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
+-- ヘッダコメントは module 宣言の直前に来る:
+--
+-- >>> let m = parseModule "M.hs" "{-# LANGUAGE CPP #-}\nmodule Main where\nmain = return ()"
+-- >>> putStrLn (last (takeWhile (/= "module Main where") (lines (generateBundle m [] M.empty))))
+-- -- ライブラリのソース: https://github.com/flowerhill/atcoder-haskell
+--
+-- プラグマはヘッダコメントより前に出る:
+--
+-- >>> let m = parseModule "M.hs" "{-# LANGUAGE CPP #-}\nmodule Main where\nmain = return ()"
 -- >>> take 1 (lines (generateBundle m [] M.empty))
--- ["-- https://github.com/flowerhill/atcoder-haskell"]
+-- ["{-# LANGUAGE CPP #-}"]
+--
+-- プラグマが1つも無いときは空行から始めない:
+--
 -- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
--- >>> lines (generateBundle m [] M.empty) !! 2
--- "module Main where"
+-- >>> mapM_ putStrLn (take 1 (lines (generateBundle m [] M.empty)))
+-- -- ライブラリのソース: https://github.com/flowerhill/atcoder-haskell
 -- >>> let m = parseModule "M.hs" "module Main where\nmain = return ()"
 -- >>> last (lines (generateBundle m [] M.empty))
 -- "main = return ()"
 generateBundle :: ModuleInfo -> [ModuleInfo] -> M.Map String ModuleInfo -> String
 generateBundle mainMod localMods localModMap =
   unlines $
-    -- 0. ライブラリの出典（提出コードから辿れるように）
-    bundleHeader
+    -- 0. 全プラグマを集約（LANGUAGEとOPTIONS_GHCのみ）。必ずファイル先頭に置く
+    pragmas
       ++
-      -- 1. 全プラグマを集約（LANGUAGEとOPTIONS_GHCのみ）
-      nub (concatMap modPragmas (mainMod : localMods))
-      ++ [""]
+      -- 1. ライブラリの出典（提出コードから辿れるように）
+      bundleHeader
       ++
       -- 2. module Main where
       ["module Main where", ""]
@@ -630,6 +643,10 @@ generateBundle mainMod localMods localModMap =
       ["", "-- Main"]
       ++ map (stripQualifiers (qualifiedLocalPrefixes localModMap mainMod)) (modBody mainMod)
   where
+    -- プラグマがあるときだけ、後続のヘッダコメントとの間に空行を入れる
+    pragmas = case nub (concatMap modPragmas (mainMod : localMods)) of
+      [] -> []
+      ps -> ps ++ [""]
     allImports = concatMap modImports (mainMod : localMods)
     localNames = S.fromList $ "Main" : M.keys localModMap
     externalImports =
