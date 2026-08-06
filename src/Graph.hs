@@ -15,6 +15,7 @@ import Data.Array.IArray
     IArray (..),
     Ix (inRange, range),
     accumArray,
+    assocs,
     elems,
     listArray,
     (!),
@@ -38,7 +39,7 @@ import qualified Data.Heap as H
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
 import Data.List (foldl')
-import Data.List.Extra (chunksOf)
+import Data.List.Extra (chunksOf, maximumOn)
 import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as S
@@ -1029,6 +1030,51 @@ subtreeSizes bnds getNext root = runSTUArray do
 -- 3
 subtreeSizesArray :: Array Int [Int] -> Int -> UArray Int Int
 subtreeSizesArray graph = subtreeSizes (bounds graph) (graph !)
+
+-- =============================================================================
+-- 木の直径
+-- =============================================================================
+
+-- | 木の直径を (辺数, (端点, 端点)) で返す
+--
+--   2回BFS。「任意の頂点から最も遠い頂点は必ず直径の端点になる」という木の性質を使い、
+--   1回目で端点 u を確定させ、2回目に u から測った最大距離が直径そのものになる。
+--   計算量: O(V + E)
+--
+--   長さだけ要るなら fst、端点だけなら snd で取れる。
+--   直径のパスが通る頂点の個数が欲しいときは fst に +1 する。
+--
+--   graph は buildG2 で作った無向グラフで、かつ連結であること。
+--   有向グラフや非連結なグラフを渡すと未到達の頂点が残り、
+--   黙って一部だけの答えを返してしまうので error で落とす。
+--
+-- >>> treeDiameter (buildG2 (1,3) [[1,2],[2,3]])
+-- (2,(3,1))
+-- >>> fst (treeDiameter (buildG2 (1,4) [[1,2],[1,3],[1,4]]))
+-- 2
+-- >>> fst (treeDiameter (buildG2 (1,10) [[1,2],[1,3],[2,4],[4,5],[4,6],[3,7],[7,8],[8,9],[8,10]]))
+-- 7
+--
+-- 頂点が1個だけの木は直径0（通る頂点は1個）:
+--
+-- >>> treeDiameter (buildG2 (1,1) [])
+-- (0,(1,1))
+treeDiameter :: Array Int [Int] -> (Int, (Int, Int))
+treeDiameter graph = (d, (u, v))
+  where
+    bnds = bounds graph
+    farthest s =
+      let dist = bfs bnds (graph !) s
+          unreached = length (filter (< 0) (elems dist))
+       in if unreached > 0
+            then
+              error $
+                "treeDiameter: 到達できない頂点が "
+                  ++ show unreached
+                  ++ " 個ある（無向グラフは buildG2 で作り、連結であること）"
+            else maximumOn snd (assocs dist)
+    (u, _) = farthest (fst bnds)
+    (v, d) = farthest u
 
 -- =============================================================================
 -- 汎用木DP
