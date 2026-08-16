@@ -21,6 +21,11 @@ getInt = readLn @Int
 getInts :: IO [Int]
 getInts = L.unfoldr (BC.readInt . BC.dropWhile C.isSpace) <$> BC.getLine
 
+-- | 標準入力の残り全体から、空白・改行区切りの Int リストを読み込む
+-- 1 行 1 数値が大量に続く入力で使う
+getIntsAll :: IO [Int]
+getIntsAll = parseLineIntList <$> BC.getContents
+
 -- | 標準入力から Integer を1つ読み込む
 getInteger :: IO Integer
 getInteger = readLn @Integer
