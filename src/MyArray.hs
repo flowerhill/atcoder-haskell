@@ -1,6 +1,8 @@
 module MyArray where
 
 import Data.Array.IArray
+import Data.Array.Unboxed (UArray)
+import Data.List (scanl')
 
 {-- IArray用 --}
 
@@ -60,3 +62,26 @@ safeRead arr idx =
   if inRange (bounds arr) idx
     then Just (arr ! idx)
     else Nothing
+
+{-- 累積和 --}
+
+-- | 累積和配列を作る。添字 i の値は先頭 i 要素の和で、bounds は (0, length xs)。
+--
+-- >>> import Data.Array.IArray (elems)
+-- >>> elems (cumsumArray [3, 1, 4, 1, 5])
+-- [0,3,4,8,9,14]
+-- >>> elems (cumsumArray [])
+-- [0]
+cumsumArray :: [Int] -> UArray Int Int
+cumsumArray xs = listArray (0, length xs) (scanl' (+) 0 xs)
+
+-- | 累積和配列から 1-indexed の閉区間 [l, r] の和を取り出す
+--
+-- >>> rangeSum (cumsumArray [3, 1, 4, 1, 5]) 2 4
+-- 6
+-- >>> rangeSum (cumsumArray [3, 1, 4, 1, 5]) 1 5
+-- 14
+-- >>> rangeSum (cumsumArray [3, 1, 4, 1, 5]) 3 3
+-- 4
+rangeSum :: UArray Int Int -> Int -> Int -> Int
+rangeSum cs l r = cs ! r - cs ! (l - 1)
