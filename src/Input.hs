@@ -137,3 +137,34 @@ printYn f = putStrLn $ bool "No" "Yes" f
 -- | リストを空白区切りで1行標準出力する
 printList :: (Show a) => [a] -> IO ()
 printList lst = putStrLn $ unwords $ map show lst
+
+-- | リストを1要素1行で標準出力する。
+-- printList と違い縦に並べる。putStrLn の繰り返しを避けて 1 回の putStr にまとめる。
+--
+-- >>> printLines [1, 2, 3 :: Int]
+-- 1
+-- 2
+-- 3
+-- >>> printLines ([] :: [Int])
+printLines :: (Show a) => [a] -> IO ()
+printLines = putStr . unlines . map show
+
+-- | グリッド（リストのリスト）を1行ずつ空白区切りで標準出力する。
+-- 行ごとに putStrLn すると 1 行ごとにフラッシュ判定が走るので、
+-- unlines でまとめて 1 回の putStr に流す。
+--
+-- >>> printGrid [[1, 2, 3], [4, 5, 6 :: Int]]
+-- 1 2 3
+-- 4 5 6
+-- >>> printGrid ([] :: [[Int]])
+printGrid :: (Show a) => [[a]] -> IO ()
+printGrid = putStr . unlines . map (unwords . map show)
+
+-- | タプルのリストを1行1組・空白区切りで標準出力する
+--
+-- >>> printPairs [(1, 2), (3, 4 :: Int)]
+-- 1 2
+-- 3 4
+-- >>> printPairs ([] :: [(Int, Int)])
+printPairs :: (Show a, Show b) => [(a, b)] -> IO ()
+printPairs = putStr . unlines . map (\(a, b) -> show a ++ " " ++ show b)
