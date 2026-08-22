@@ -9,6 +9,18 @@ import Math (exEuclid, sumOfRange)
 modulus :: Int
 modulus = 1000000007
 
+-- | 値を [0, 10^9+7) に正規化する。負の数も正の代表元に落ちる
+--
+-- >>> normMod 1000000008
+-- 1
+-- >>> normMod (-1)
+-- 1000000006
+-- >>> normMod 0
+-- 0
+normMod :: Int -> Int
+normMod x = x `mod` modulus
+{-# INLINE normMod #-}
+
 -- | mod 10^9+7 の加算
 --
 -- >>> addMod 1000000006 1
