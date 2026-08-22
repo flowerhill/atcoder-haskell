@@ -23,13 +23,34 @@ else
 fi
 
 fail=0
+env_mismatch=0
 for f in "${files[@]}"; do
   echo "== doctest $f =="
   # include path はファイル自身のディレクトリ（src/ なら -isrc、tools/ なら -itools）
-  if ! cabal exec -v0 -- doctest -i"$(dirname "$f")" "$f"; then
+  out=$(cabal exec -v0 -- doctest -i"$(dirname "$f")" "$f" 2>&1)
+  status=$?
+  printf '%s\n' "$out"
+  if [ "$status" -ne 0 ]; then
     fail=1
+    # GHC 環境の食い違いは全モジュールで同じエラーを吐くので、原因を1回だけ案内する
+    case "$out" in
+    *"cannot satisfy -package-id"*) env_mismatch=1 ;;
+    esac
   fi
 done
+
+if [ "$env_mismatch" -ne 0 ]; then
+  cat >&2 <<'MSG'
+
+doctest: GHC 環境の食い違いの可能性があります。
+doctest は GHC API を静的リンクしているため、cabal がビルドに使う GHC と別インストールの
+GHC でビルドされた doctest を使うと、boot package の unit-id が一致せず package-id を
+解決できません（doctest の失敗そのものではありません）。
+対処:
+  - devshell の外で実行していないか確認する: nix develop -c scripts/doctest.sh
+  - devshell 内でも出るなら doctest を入れ直す: cabal install doctest --overwrite-policy=always
+MSG
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo "doctest: FAILED" >&2
