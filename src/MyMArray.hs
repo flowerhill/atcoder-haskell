@@ -271,3 +271,11 @@ ldsLengths :: [Int] -> UArray Int Int
 ldsLengths xs = listArray (0, n - 1) . reverse . elems . lisLengths $ reverse xs
   where
     n = length xs
+
+-- | ST 内で STUArray を確保する（型注釈なしで使えるようにした newArray）
+--
+-- >>> import Data.Array.ST (runSTUArray, writeArray); import Data.Array.Unboxed ((!))
+-- >>> runSTUArray (newSTUArray (0,2) False >>= \a -> writeArray a 1 True >> return a) ! 1
+-- True
+newSTUArray :: (Ix i, MArray (STUArray s) e (ST s)) => (i, i) -> e -> ST s (STUArray s i e)
+newSTUArray = newArray
