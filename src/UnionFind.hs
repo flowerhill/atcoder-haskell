@@ -6,6 +6,7 @@ import Control.Monad (forM_, when)
 import Control.Monad.ST (ST)
 import Data.Array.IArray (Array, listArray, (!))
 import Data.Array.MArray (MArray, newArray, readArray, writeArray)
+import Data.Array.ST (STUArray)
 import Data.Ix (Ix, index, range, rangeSize)
 
 -- $setup
@@ -106,3 +107,10 @@ getSize :: (Ix i, MArray (arr s) Int (ST s)) => UnionFind arr s i -> i -> ST s I
 getSize uf x = do
   r <- getRootFlat uf (index (ufBounds uf) x)
   readArray (ufSize uf) r
+
+-- | STUArray 版 newUF。ST 内で使うときの型注釈を省くための薄いラッパ。
+--
+-- >>> runST $ do { uf <- newUFST ((1,1),(2,2)); unite uf (1,1) (1,2); sameUF uf (1,1) (1,2) }
+-- True
+newUFST :: (Ix i) => (i, i) -> ST s (UnionFind STUArray s i)
+newUFST = newUF
