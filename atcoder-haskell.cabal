@@ -35,6 +35,7 @@ library
                       MyArray
                       MyMArray
                       MyMVector
+                      BSearch
                       BSearchArray
                       BSearchVector
                       Encode

@@ -3,7 +3,7 @@
 
 module MyMArray where
 
-import BSearchVector (bisectM)
+import BSearch (bisectM)
 import Control.Monad (foldM, forM_)
 import Control.Monad.ST
 import Data.Array.IArray (IArray (bounds), elems, listArray)

@@ -1,41 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module BSearchVector where
+module BSearchVector (module BSearch, module BSearchVector) where
 
+import BSearch
 import Data.Vector.Unboxed qualified as VU
 
 {-- 二分探索 Vector.Unboxed版 --}
-
--- | 左が false / 右が true で境界を引く
--- ng で f が False、ok で f が True となる境界を返す
---
--- >>> bisect (-1, 10) (\x -> x >= 3)
--- (2,3)
--- >>> bisect (0, 100) (\x -> x * x >= 25)
--- (4,5)
-bisect :: (Integral a) => (a, a) -> (a -> Bool) -> (a, a)
-bisect (ng, ok) f
-  | abs (ok - ng) == 1 = (ng, ok)
-  | f m = bisect (ng, m) f
-  | otherwise = bisect (m, ok) f
-  where
-    m = (ok + ng) `div` 2
-
--- | モナド版二分探索
---
--- >>> bisectM (-1, 10) (\x -> return (x >= 3))
--- (2,3)
-bisectM :: (Monad m, Integral a) => (a, a) -> (a -> m Bool) -> m (a, a)
-bisectM (ng, ok) f
-  | abs (ok - ng) == 1 = return (ng, ok)
-  | otherwise = do
-      x <- f mid
-      if x
-        then bisectM (ng, mid) f
-        else bisectM (mid, ok) f
-  where
-    mid = (ok + ng) `div` 2
 
 -- | x以上の値が最初に現れるインデックスを取得
 --

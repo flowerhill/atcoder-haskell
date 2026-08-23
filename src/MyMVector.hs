@@ -2,7 +2,7 @@
 
 module MyMVector where
 
-import BSearchVector (bisectM)
+import BSearch (bisectM)
 import Control.Monad (foldM)
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Control.Monad.ST (runST)
