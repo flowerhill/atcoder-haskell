@@ -684,6 +684,16 @@ getComponentsArray graph =
 buildGrid :: (IArray UArray e, Ix i, Foldable t) => (i, i) -> t [e] -> UArray i e
 buildGrid bnds lst = listArray @UArray bnds $ concat lst
 
+-- | 4方向の隣接座標のうち bounds 内のものだけを返す（グリッドの中身は見ない）
+--
+-- >>> adjacents4 ((1,1),(3,3)) (1,1)
+-- [(2,1),(1,2)]
+-- >>> adjacents4 ((1,1),(3,3)) (2,2)
+-- [(1,2),(3,2),(2,1),(2,3)]
+adjacents4 :: ((Int, Int), (Int, Int)) -> (Int, Int) -> [(Int, Int)]
+adjacents4 bnds (r, c) =
+  filter (inRange bnds) [(r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)]
+
 -- | グリッド上の隣接座標を取得する（4方向版）
 --
 -- >>> import Data.Array.Unboxed (listArray)
