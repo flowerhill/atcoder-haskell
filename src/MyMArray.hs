@@ -234,6 +234,52 @@ imos2D ((xlo, ylo), (xhi, yhi)) qs = runSTUArray $ do
       writeArray result (x, y) v
   return result
 
+-- | 2次元いもす法（半開矩形版）: 半開矩形 [lx, rx) × [ly, ry) への加算クエリを処理し、
+-- 各単位マス (x, y) = [x, x+1) × [y, y+1) での合計値の UArray を返す。
+-- 引数はマスの番号ではなく矩形の「辺の座標」で、bounds もその座標の範囲を指定する。
+-- マス (xhi, *) と (*, yhi) は辺より右上に出るため常に 0 になる。
+-- 閉区間版の imos2D と違い、打ち消しを rx, ry にそのまま置けるので
+-- 呼び出し側で ±1 の変換が要らず、余白確保と結果のコピーも不要。O(N + W*H)。
+--
+-- マスの番号を直接指定したい場合は閉区間版の imos2D を使う。
+--
+-- >>> import Data.Array.Unboxed ((!))
+-- >>> let arr = imos2DHalfOpen ((0,0),(3,3)) [((0,0),(2,2),1), ((1,1),(3,3),1)]
+-- >>> [arr ! (i,j) | i <- [0..2], j <- [0..2]]
+-- [1,1,0,1,2,1,0,1,1]
+--
+-- 辺だけを共有する2つの矩形は重ならない（半開区間なので rx がそのまま境界）
+-- >>> let arr = imos2DHalfOpen ((0,0),(2,1)) [((0,0),(1,1),1), ((1,0),(2,1),1)]
+-- >>> [arr ! (i,0) | i <- [0..1]]
+-- [1,1]
+--
+-- 辺の上限に接するマスは範囲外なので 0 のまま
+-- >>> let arr = imos2DHalfOpen ((0,0),(2,2)) [((0,0),(1,1),5)]
+-- >>> [arr ! (i,j) | i <- [0..2], j <- [0..2]]
+-- [5,0,0,0,0,0,0,0,0]
+imos2DHalfOpen ::
+  ((Int, Int), (Int, Int)) ->
+  [((Int, Int), (Int, Int), Int)] ->
+  UArray (Int, Int) Int
+imos2DHalfOpen bnd@((xlo, ylo), (xhi, yhi)) qs = runSTUArray $ do
+  diff <- newArray bnd 0 :: ST s (STUArray s (Int, Int) Int)
+  forM_ qs $ \((lx, ly), (rx, ry), v) -> do
+    modifyArray2 diff (lx, ly) v (+)
+    modifyArray2 diff (rx, ly) (negate v) (+) -- 半開区間 [lx, rx) なので rx で打ち消す
+    modifyArray2 diff (lx, ry) (negate v) (+)
+    modifyArray2 diff (rx, ry) v (+)
+  -- x方向 累積和
+  forM_ [ylo .. yhi] $ \y ->
+    forM_ [xlo + 1 .. xhi] $ \x -> do
+      prev <- readArray diff (x - 1, y)
+      modifyArray2 diff (x, y) prev (+)
+  -- y方向 累積和
+  forM_ [xlo .. xhi] $ \x ->
+    forM_ [ylo + 1 .. yhi] $ \y -> do
+      prev <- readArray diff (x, y - 1)
+      modifyArray2 diff (x, y) prev (+)
+  return diff
+
 {-- LIS / LDS --}
 
 -- | 各位置 i で終わる最長増加部分列（狭義）の長さを返す (O(N log N))。
