@@ -325,3 +325,11 @@ ldsLengths xs = listArray (0, n - 1) . reverse . elems . lisLengths $ reverse xs
 -- True
 newSTUArray :: (Ix i, MArray (STUArray s) e (ST s)) => (i, i) -> e -> ST s (STUArray s i e)
 newSTUArray = newArray
+
+-- | ST 内で STUArray をリストから確保する（型注釈なしで使えるようにした newListArray）
+--
+-- >>> import Data.Array.ST (runSTUArray); import Data.Array.Unboxed ((!))
+-- >>> runSTUArray (newSTUListArray (0, 2) [1, 2, 3 :: Int]) ! 2
+-- 3
+newSTUListArray :: (Ix i, MArray (STUArray s) e (ST s)) => (i, i) -> [e] -> ST s (STUArray s i e)
+newSTUListArray = newListArray
