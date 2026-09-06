@@ -332,6 +332,7 @@ countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 
 -- | 長さ n の円環で、0-indexed 位置 i を右シフト量 d だけ読み替えた先のインデックスを返す。
 -- 配列を実際に回さず参照位置の読み替えだけで巡回シフトを O(1) で表現するのに使う。
+-- d は符号付きで、負なら左シフトを表す（mod が [0, n) に正規化するため）。
 --
 -- >>> cyclicIndex 8 1 0
 -- 7
@@ -341,5 +342,34 @@ countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 -- 3
 -- >>> cyclicIndex 5 2 1
 -- 4
+--
+-- 左シフトは d を負にする
+-- >>> cyclicIndex 5 (-1) 0
+-- 1
 cyclicIndex :: Int -> Int -> Int -> Int
 cyclicIndex n d i = (i - d) `mod` n
+
+-- | cyclicIndex の 1-indexed 版。長さ n の円環で、1-indexed 位置 i を
+-- 右シフト量 d（負なら左シフト）だけ読み替えた先を 1-indexed で返す。
+-- 問題文が 1-indexed のとき、bounds を (1, n) のまま扱うために使う。
+--
+-- >>> cyclicIndex1 8 1 1
+-- 8
+-- >>> cyclicIndex1 8 1 2
+-- 1
+-- >>> cyclicIndex1 5 0 3
+-- 3
+-- >>> cyclicIndex1 5 2 1
+-- 4
+--
+-- シフト量が n を超えても巻き戻る
+-- >>> cyclicIndex1 3 4 1
+-- 3
+--
+-- 左シフトは d を負にする
+-- >>> cyclicIndex1 5 (-1) 1
+-- 2
+-- >>> cyclicIndex1 5 (-1) 5
+-- 1
+cyclicIndex1 :: Int -> Int -> Int -> Int
+cyclicIndex1 n d i = cyclicIndex n d (i - 1) + 1
