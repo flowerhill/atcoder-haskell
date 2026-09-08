@@ -2,6 +2,7 @@ module MyList where
 
 import Control.Monad.State (StateT (StateT, runStateT))
 import Data.List (find, findIndex, foldl', inits, sort, tails)
+import Data.List.Extra (merge)
 import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Intro as VAI
 
@@ -262,6 +263,26 @@ combSums [] _ = []
 combSums (x : xs) j =
   map (+ x) (combSums xs (j - 1)) -- x を選ぶ
     ++ combSums xs j -- x を選ばない
+
+-- | 部分集合の合計値を「選んだ個数」ごとに分類して列挙する（半分全列挙の前処理）。
+-- 返り値の j 番目は、ちょうど j 個選んだときの合計値を昇順に並べたリスト。
+--
+-- combSums を個数ごとに呼ぶと同じ部分和を何度も作り直すが、
+-- こちらは要素を1つずつ足しながら「その要素を使う版」を merge していくので、
+-- 全体で O(2^N) の生成量に収まり、しかも各リストがソート済みで出てくる。
+--
+-- >>> subsetSumsByCount [3,8]
+-- [[0],[3,8],[11]]
+-- >>> subsetSumsByCount [5,1]
+-- [[0],[1,5],[6]]
+-- >>> subsetSumsByCount ([] :: [Int])
+-- [[0]]
+subsetSumsByCount :: [Int] -> [[Int]]
+subsetSumsByCount = foldl' step [[0]]
+  where
+    -- j 個選ぶ = (a を使わず j 個) と (a を使って残り j-1 個) の合併
+    step buckets a =
+      zipWith merge (buckets ++ [[]]) ([] : map (map (+ a)) buckets)
 
 -- | 2つのリストを先頭から交互に連結する。長さが違う場合、余った要素は末尾にそのまま付く。
 --
