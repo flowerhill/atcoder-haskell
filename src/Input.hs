@@ -12,6 +12,7 @@ import qualified Data.Char as C
 import qualified Data.List as L
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
+import Numeric (showFFloat)
 
 -- | 標準入力から Int を1つ読み込む
 getInt :: IO Int
@@ -168,3 +169,25 @@ printGrid = putStr . unlines . map (unwords . map show)
 -- >>> printPairs ([] :: [(Int, Int)])
 printPairs :: (Show a, Show b) => [(a, b)] -> IO ()
 printPairs = putStr . unlines . map (\(a, b) -> show a ++ " " ++ show b)
+
+-- | Double を小数点以下 d 桁の固定小数表記にする。
+-- show だと 1.0e-9 のような指数表記になり実数ジャッジに通らないので、
+-- 誤差許容付きの出力にはこちらを使う。
+--
+-- >>> showFixed 3 3.14159
+-- "3.142"
+-- >>> showFixed 6 (-1.5)
+-- "-1.500000"
+-- >>> showFixed 9 1e-9
+-- "0.000000001"
+showFixed :: Int -> Double -> String
+showFixed d v = showFFloat (Just d) v ""
+
+-- | Double のリストを小数点以下 d 桁で1行1個ずつ標準出力する
+--
+-- >>> printLinesFixed 2 [1, 2.346]
+-- 1.00
+-- 2.35
+-- >>> printLinesFixed 2 []
+printLinesFixed :: Int -> [Double] -> IO ()
+printLinesFixed d = putStr . unlines . map (showFixed d)
