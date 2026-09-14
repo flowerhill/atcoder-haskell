@@ -35,6 +35,7 @@ library
                       MyArray
                       MyMArray
                       MyMVector
+                      MyVector
                       BSearch
                       BSearchArray
                       BSearchVector
@@ -102,7 +103,8 @@ test-suite spec
                       QuickCheck,
                       base,
                       atcoder-haskell,
-                      hspec
+                      hspec,
+                      vector
 
     build-tool-depends:
         hspec-discover:hspec-discover

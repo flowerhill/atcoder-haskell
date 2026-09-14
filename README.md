@@ -179,7 +179,7 @@ make submit-oj
 - **Encode.hs**: ランレングス圧縮
 - **IntMultiSet.hs**: 整数のマルチセット
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
-- **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
+- **MyArray.hs / MyMArray.hs / MyVector.hs / MyMVector.hs**: 配列・可変配列・ベクタ・可変ベクタ操作
 - **MyList.hs**: リスト操作拡張
 
 ## ⚙️ 設定
