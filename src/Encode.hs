@@ -1,6 +1,7 @@
 module Encode where
 
-import Data.List (group)
+import Data.Char (isDigit)
+import qualified Data.List.NonEmpty as NE
 
 -- | ランレングス圧縮: 連続する同じ要素を (値, 個数) にまとめる
 --
@@ -8,50 +9,41 @@ import Data.List (group)
 -- [('a',3),('b',2),('c',1)]
 -- >>> runLengthEncode [1,1,2,3,3,3 :: Int]
 -- [(1,2),(2,1),(3,3)]
-runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
-runLengthEncode = map (\xs -> (head xs, length xs)) . group
-
--- | エンコード: 文字列をラン長圧縮する
---
--- >>> encode "aaabbc"
--- [(3,'a'),(2,'b'),(1,'c')]
--- >>> encode ""
+-- >>> runLengthEncode ""
 -- []
-encode :: String -> [(Int, Char)]
-encode = map (\xs -> (length xs, head xs)) . group
+runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
+runLengthEncode = map (\g -> (NE.head g, NE.length g)) . NE.group
 
--- | デコード: 圧縮された形式から元の文字列に戻す
+-- | ランレングス圧縮の復元: (値, 個数) の並びを元の列に戻す（'runLengthEncode' の逆）
 --
--- >>> decode [(3,'a'),(2,'b'),(1,'c')]
+-- >>> runLengthDecode [('a',3),('b',2),('c',1)]
 -- "aaabbc"
--- >>> decode []
--- ""
-decode :: [(Int, Char)] -> String
-decode = concatMap (uncurry replicate)
+-- >>> runLengthDecode ([] :: [(Int, Int)])
+-- []
+runLengthDecode :: [(a, Int)] -> [a]
+runLengthDecode = concatMap (\(x, n) -> replicate n x)
 
--- | エンコードの結果を文字列として表現
+-- | ランレングス圧縮の結果を「個数 + 文字」を並べた文字列で表す
 --
 -- >>> encodeToString "aaabbc"
 -- "3a2b1c"
+-- >>> encodeToString ""
+-- ""
 encodeToString :: String -> String
-encodeToString = concatMap (\(n, c) -> show n ++ [c]) . encode
+encodeToString = concatMap (\(c, n) -> show n ++ [c]) . runLengthEncode
 
--- | 文字列からデコード
+-- | 「個数 + 文字」を並べた文字列から元の文字列に戻す（'encodeToString' の逆）
 --
 -- >>> decodeFromString "3a2b1c"
 -- "aaabbc"
+-- >>> decodeFromString "12x"
+-- "xxxxxxxxxxxx"
 -- >>> decodeFromString ""
 -- ""
 decodeFromString :: String -> String
-decodeFromString "" = ""
-decodeFromString s = decode $ parseEncoded s
+decodeFromString = runLengthDecode . parseEncoded
   where
-    parseEncoded :: String -> [(Int, Char)]
-    parseEncoded [] = []
-    parseEncoded str =
-      let (nums, rest) = span isDigit str
-       in case rest of
-            (c : rs) -> (read nums, c) : parseEncoded rs
-            [] -> []
-
-    isDigit c = c >= '0' && c <= '9'
+    parseEncoded :: String -> [(Char, Int)]
+    parseEncoded str = case span isDigit str of
+      (nums, c : rest) -> (c, read nums) : parseEncoded rest
+      _ -> []

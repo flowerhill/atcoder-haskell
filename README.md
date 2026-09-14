@@ -177,7 +177,7 @@ make submit-oj
 - **Debug.hs**: DEBUG 環境変数連動のトレース
 - **Graph.hs**: グラフアルゴリズム（BFS/DFS/最短路/Dijkstra/SCC/Warshall-Floyd/木DP）
 - **BSearch.hs / BSearchArray.hs / BSearchVector.hs**: 二分探索（Array 版は `lookupGEA` のように末尾 A、Vector 版は末尾 V）
-- **Encode.hs**: ランレングス圧縮
+- **Encode.hs**: ランレングス圧縮と復元
 - **IntMultiSet.hs**: 整数のマルチセット
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
 - **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
