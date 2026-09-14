@@ -1,9 +1,11 @@
 module MyList where
 
 import Control.Monad.State (StateT (StateT, runStateT))
-import Data.List (find, findIndex, foldl', inits, sort, tails)
+import Data.List (find, findIndex, foldl', inits, scanl', sort, tails)
 import Data.List.Extra (merge)
+import qualified Data.Set as S
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as VU
 import qualified Data.Vector.Algorithms.Intro as VAI
 
 {--  リスト走査 --}
@@ -394,3 +396,40 @@ cyclicIndex n d i = (i - d) `mod` n
 -- 1
 cyclicIndex1 :: Int -> Int -> Int -> Int
 cyclicIndex1 n d i = cyclicIndex n d (i - 1) + 1
+
+{-- 部分列 --}
+
+-- | 各位置 i について「i 番目で終わる狭義単調増加部分列の最長の長さ」を返す（O(N log N)）。
+-- 最大値を取れば LIS の長さになる。
+-- 「i 番目から始まる狭義減少部分列の長さ」は @VU.reverse . lisEnding . reverse@ で得られる。
+--
+-- ends（長さ k の増加部分列の末尾として最小の値を、k の小さい順に並べた集合）を更新し、
+-- y が ends の何番目に入ったか（= y 未満の末尾の個数）+ 1 を長さとする。
+-- 結果を unboxed vector で返すのは、各長さをその場で確定させ、過去の Set を掴んだ
+-- サンクを残さないため（リストで返すと N = 3×10^5 で数百 MB に膨らむ）。
+--
+-- >>> lisEnding [1,2,3,3,2,1 :: Int]
+-- [1,2,3,3,2,1]
+-- >>> lisEnding [2,5,3,4,1 :: Int]
+-- [1,2,2,3,1]
+-- >>> lisEnding [3,3,3 :: Int]
+-- [1,1,1]
+-- >>> lisEnding ([] :: [Int])
+-- []
+lisEnding :: (Ord a) => [a] -> VU.Vector Int
+lisEnding ys = VU.fromList $ zipWith (\y s -> S.findIndex y s + 1) ys (drop 1 $ scanl' push S.empty ys)
+  where
+    -- y 以上の最小要素を y で置き換える（無ければ末尾に追加 = 最長が 1 伸びる）
+    push ends y = S.insert y $ maybe ends (`S.delete` ends) (S.lookupGE y ends)
+
+-- | 'lisEnding' の広義版。各位置 i について「i 番目で終わる広義単調増加部分列の最長の長さ」を返す。
+-- (値, 添字) の組は後ろほど添字が大きいので、組での狭義増加 = 値での広義増加 になる。
+--
+-- >>> lisEndingNonStrict [1,2,3,3,2,1 :: Int]
+-- [1,2,3,4,3,2]
+-- >>> lisEndingNonStrict [3,3,3 :: Int]
+-- [1,2,3]
+-- >>> lisEndingNonStrict ([] :: [Int])
+-- []
+lisEndingNonStrict :: (Ord a) => [a] -> VU.Vector Int
+lisEndingNonStrict ys = lisEnding $ zip ys [0 :: Int ..]
