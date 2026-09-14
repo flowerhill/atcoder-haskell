@@ -175,7 +175,7 @@ make submit-oj
 - **MyString.hs**: 文字列操作（回文判定・部分文字列）
 - **Debug.hs**: DEBUG 環境変数連動のトレース
 - **Graph.hs**: グラフアルゴリズム（BFS/DFS/最短路/Dijkstra/SCC/Warshall-Floyd/木DP）
-- **BSearchArray.hs / BSearchVector.hs**: 二分探索
+- **BSearch.hs / BSearchArray.hs / BSearchVector.hs**: 二分探索（Array 版は `lookupGEA` のように末尾 A、Vector 版は末尾 V）
 - **Encode.hs**: ランレングス圧縮
 - **IntMultiSet.hs**: 整数のマルチセット
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find

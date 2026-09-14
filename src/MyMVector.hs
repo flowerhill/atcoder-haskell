@@ -17,19 +17,14 @@ import qualified Data.Vector.Unboxed.Mutable as VUM
 --
 -- >>> import qualified Data.Vector.Unboxed.Mutable as VUM
 -- >>> v <- VUM.generate 3 id :: IO (VUM.IOVector Int)
--- >>> v !? 1
+-- >>> safeReadM v 1
 -- Just 1
--- >>> v !? 5
+-- >>> safeReadM v 5
 -- Nothing
-(!?) :: (PrimMonad m, VU.Unbox e) => VUM.MVector (PrimState m) e -> Int -> m (Maybe e)
-(!?) v i
+safeReadM :: (PrimMonad m, VU.Unbox e) => VUM.MVector (PrimState m) e -> Int -> m (Maybe e)
+safeReadM v i
   | i < 0 || i >= VUM.length v = return Nothing
   | otherwise = Just <$> VUM.unsafeRead v i
-{-# INLINE (!?) #-}
-
--- | (!?) の別名（命名を MyMArray と揃えたいとき用）
-safeReadM :: (PrimMonad m, VU.Unbox e) => VUM.MVector (PrimState m) e -> Int -> m (Maybe e)
-safeReadM = (!?)
 {-# INLINE safeReadM #-}
 
 -- | 範囲内なら書いて True、範囲外なら False を返す。

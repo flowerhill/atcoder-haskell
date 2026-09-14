@@ -33,22 +33,6 @@ getArrayValues as = [e | (_, e) <- assocs as]
 getArrayKeys :: (IArray a1 e, Ix a2) => a1 a2 e -> [a2]
 getArrayKeys as = [k | (k, _) <- assocs as]
 
--- | 範囲内なら Just、範囲外なら Nothing を返す (!?)
--- (safeRead と同等の機能を演算子として提供)
---
--- >>> import Data.Array.IArray (listArray)
--- >>> let arr = listArray (0, 2) [10, 20, 30] :: Array Int Int
--- >>> safeRead arr 1
--- Just 20
--- >>> safeRead arr 5
--- Nothing
-(!?) :: (IArray a e, Ix i) => a i e -> i -> Maybe e
-(!?) arr i =
-  let b = bounds arr
-   in if inRange b i
-        then Just (arr ! i)
-        else Nothing
-
 -- | 範囲内なら Just で値を返す安全な読み取り
 --
 -- >>> import Data.Array.IArray (listArray)

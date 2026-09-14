@@ -8,118 +8,121 @@ import Data.Vector.Unboxed qualified as VU
 
 {-- 二分探索 Vector.Unboxed版 --}
 
+-- 命名: 末尾の V は Vector.Unboxed 版であることを表す（IArray 版は A）。
+-- バンドラが全モジュールを 1 ファイルに展開するため、Array 版と Vector 版で名前を分けている。
+
 -- | x以上の値が最初に現れるインデックスを取得
 --
--- >>> lookupGEIdx 4 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGEIdxV 4 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 2
--- >>> lookupGEIdx 10 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGEIdxV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupGEIdx :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
-lookupGEIdx x xs
+lookupGEIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
+lookupGEIdxV x xs
   | VU.null xs = Nothing
   | otherwise =
-      let i = boundGE x xs
+      let i = boundGEV x xs
        in if i >= VU.length xs
             then Nothing
             else Just i
 
 -- | xより大きい値が最初に現れるインデックスを取得
 --
--- >>> lookupGTIdx 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGTIdxV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 3
--- >>> lookupGTIdx 9 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGTIdxV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupGTIdx :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
-lookupGTIdx x xs
+lookupGTIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
+lookupGTIdxV x xs
   | VU.null xs = Nothing
   | otherwise =
-      let i = boundGT x xs
+      let i = boundGTV x xs
        in if i >= VU.length xs
             then Nothing
             else Just i
 
 -- | xより小さい値が最後に現れるインデックスを取得
 --
--- >>> lookupLTIdx 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLTIdxV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 1
--- >>> lookupLTIdx 1 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLTIdxV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupLTIdx :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
-lookupLTIdx x xs
+lookupLTIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
+lookupLTIdxV x xs
   | VU.null xs = Nothing
   | otherwise =
-      let i = boundLT x xs
+      let i = boundLTV x xs
        in if i < 0
             then Nothing
             else Just i
 
 -- | x以下の値が最後に現れるインデックスを取得
 --
--- >>> lookupLEIdx 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLEIdxV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 2
--- >>> lookupLEIdx 0 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLEIdxV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupLEIdx :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
-lookupLEIdx x xs
+lookupLEIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
+lookupLEIdxV x xs
   | VU.null xs = Nothing
   | otherwise =
-      let i = boundLE x xs
+      let i = boundLEV x xs
        in if i < 0
             then Nothing
             else Just i
 
 -- | x以上の値が最初に現れる値を取得
 --
--- >>> lookupGE 4 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGEV 4 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 5
--- >>> lookupGE 10 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGEV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupGE :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
-lookupGE x xs = do
-  i <- lookupGEIdx x xs
+lookupGEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
+lookupGEV x xs = do
+  i <- lookupGEIdxV x xs
   return (xs VU.! i)
 
 -- | xより大きい値が最初に現れる値を取得
 --
--- >>> lookupGT 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGTV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 7
--- >>> lookupGT 9 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupGTV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupGT :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
-lookupGT x xs = do
-  i <- lookupGTIdx x xs
+lookupGTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
+lookupGTV x xs = do
+  i <- lookupGTIdxV x xs
   return (xs VU.! i)
 
 -- | xより小さい値が最後に現れる値を取得
 --
--- >>> lookupLT 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLTV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 3
--- >>> lookupLT 1 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLTV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupLT :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
-lookupLT x xs = do
-  i <- lookupLTIdx x xs
+lookupLTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
+lookupLTV x xs = do
+  i <- lookupLTIdxV x xs
   return (xs VU.! i)
 
 -- | x以下の値が最後に現れる値を取得
 --
--- >>> lookupLE 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLEV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- Just 5
--- >>> lookupLE 0 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> lookupLEV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
-lookupLE :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
-lookupLE x xs = do
-  i <- lookupLEIdx x xs
+lookupLEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
+lookupLEV x xs = do
+  i <- lookupLEIdxV x xs
   return (xs VU.! i)
 
 -- | x以上の値が最初に現れるインデックスを取得（境界外の場合は配列長を返す）
 --
--- >>> boundGE 4 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundGEV 4 (VU.fromList [1,3,5,7,9 :: Int])
 -- 2
--- >>> boundGE 10 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundGEV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- 5
-boundGE :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
-boundGE x xs
+boundGEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
+boundGEV x xs
   | VU.null xs = 0
   | otherwise =
       let (_, ok) = bisect (-1, VU.length xs) (\i -> xs VU.! i >= x)
@@ -127,12 +130,12 @@ boundGE x xs
 
 -- | xより大きい値が最初に現れるインデックスを取得（境界外の場合は配列長を返す）
 --
--- >>> boundGT 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundGTV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- 3
--- >>> boundGT 9 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundGTV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- 5
-boundGT :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
-boundGT x xs
+boundGTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
+boundGTV x xs
   | VU.null xs = 0
   | otherwise =
       let (_, ok) = bisect (-1, VU.length xs) (\i -> xs VU.! i > x)
@@ -140,12 +143,12 @@ boundGT x xs
 
 -- | xより小さい値が最後に現れるインデックスを取得（境界外の場合は-1を返す）
 --
--- >>> boundLT 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundLTV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- 1
--- >>> boundLT 1 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundLTV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- -1
-boundLT :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
-boundLT x xs
+boundLTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
+boundLTV x xs
   | VU.null xs = -1
   | otherwise =
       let (ng, _) = bisect (-1, VU.length xs) (\i -> xs VU.! i >= x)
@@ -153,12 +156,12 @@ boundLT x xs
 
 -- | x以下の値が最後に現れるインデックスを取得（境界外の場合は-1を返す）
 --
--- >>> boundLE 5 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundLEV 5 (VU.fromList [1,3,5,7,9 :: Int])
 -- 2
--- >>> boundLE 0 (VU.fromList [1,3,5,7,9 :: Int])
+-- >>> boundLEV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- -1
-boundLE :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
-boundLE x xs
+boundLEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
+boundLEV x xs
   | VU.null xs = -1
   | otherwise =
       let (ng, _) = bisect (-1, VU.length xs) (\i -> xs VU.! i > x)

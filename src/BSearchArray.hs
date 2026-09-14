@@ -8,18 +8,21 @@ import Data.Array.IArray (IArray, Ix, bounds, (!))
 
 {-- 二分探索 --}
 
+-- 命名: 末尾の A は IArray 版であることを表す（Vector 版は V）。
+-- バンドラが全モジュールを 1 ファイルに展開するため、Array 版と Vector 版で名前を分けている。
+
 -- | x以上の値が最初に現れるインデックスを取得
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupGEIdx 4 arr
+-- >>> lookupGEIdxA 4 arr
 -- Just 2
--- >>> lookupGEIdx 10 arr
+-- >>> lookupGEIdxA 10 arr
 -- Nothing
-lookupGEIdx :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
-lookupGEIdx x xs = do
+lookupGEIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
+lookupGEIdxA x xs = do
   let (_, ub) = bounds xs
-      i = boundGE x xs
+      i = boundGEA x xs
 
   if i == succ ub
     then Nothing
@@ -29,14 +32,14 @@ lookupGEIdx x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupGTIdx 5 arr
+-- >>> lookupGTIdxA 5 arr
 -- Just 3
--- >>> lookupGTIdx 9 arr
+-- >>> lookupGTIdxA 9 arr
 -- Nothing
-lookupGTIdx :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
-lookupGTIdx x xs = do
+lookupGTIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
+lookupGTIdxA x xs = do
   let (_, ub) = bounds xs
-      i = boundGT x xs
+      i = boundGTA x xs
 
   if i == succ ub
     then Nothing
@@ -46,14 +49,14 @@ lookupGTIdx x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupLTIdx 5 arr
+-- >>> lookupLTIdxA 5 arr
 -- Just 1
--- >>> lookupLTIdx 1 arr
+-- >>> lookupLTIdxA 1 arr
 -- Nothing
-lookupLTIdx :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
-lookupLTIdx x xs = do
+lookupLTIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
+lookupLTIdxA x xs = do
   let (lb, _) = bounds xs
-      i = boundLT x xs
+      i = boundLTA x xs
 
   if i == pred lb
     then Nothing
@@ -63,14 +66,14 @@ lookupLTIdx x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupLEIdx 5 arr
+-- >>> lookupLEIdxA 5 arr
 -- Just 2
--- >>> lookupLEIdx 0 arr
+-- >>> lookupLEIdxA 0 arr
 -- Nothing
-lookupLEIdx :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
-lookupLEIdx x xs = do
+lookupLEIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
+lookupLEIdxA x xs = do
   let (lb, _) = bounds xs
-      i = boundLE x xs
+      i = boundLEA x xs
 
   if i == pred lb
     then Nothing
@@ -80,14 +83,14 @@ lookupLEIdx x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupGE 4 arr
+-- >>> lookupGEA 4 arr
 -- Just 5
--- >>> lookupGE 10 arr
+-- >>> lookupGEA 10 arr
 -- Nothing
-lookupGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupGE x xs = do
+lookupGEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupGEA x xs = do
   let (_, ub) = bounds xs
-      i = boundGE x xs
+      i = boundGEA x xs
 
   if i == succ ub
     then Nothing
@@ -97,14 +100,14 @@ lookupGE x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupGT 5 arr
+-- >>> lookupGTA 5 arr
 -- Just 7
--- >>> lookupGT 9 arr
+-- >>> lookupGTA 9 arr
 -- Nothing
-lookupGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupGT x xs = do
+lookupGTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupGTA x xs = do
   let (_, ub) = bounds xs
-      i = boundGT x xs
+      i = boundGTA x xs
 
   if i == succ ub
     then Nothing
@@ -114,14 +117,14 @@ lookupGT x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupLT 5 arr
+-- >>> lookupLTA 5 arr
 -- Just 3
--- >>> lookupLT 1 arr
+-- >>> lookupLTA 1 arr
 -- Nothing
-lookupLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupLT x xs = do
+lookupLTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupLTA x xs = do
   let (lb, _) = bounds xs
-      i = boundLT x xs
+      i = boundLTA x xs
 
   if i == pred lb
     then Nothing
@@ -131,14 +134,14 @@ lookupLT x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> lookupLE 5 arr
+-- >>> lookupLEA 5 arr
 -- Just 5
--- >>> lookupLE 0 arr
+-- >>> lookupLEA 0 arr
 -- Nothing
-lookupLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
-lookupLE x xs = do
+lookupLEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
+lookupLEA x xs = do
   let (lb, _) = bounds xs
-      i = boundLE x xs
+      i = boundLEA x xs
 
   if i == pred lb
     then Nothing
@@ -148,12 +151,12 @@ lookupLE x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> boundGE 4 arr
+-- >>> boundGEA 4 arr
 -- 2
--- >>> boundGE 10 arr
+-- >>> boundGEA 10 arr
 -- 5
-boundGE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundGE x xs = do
+boundGEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundGEA x xs = do
   let (lb, ub) = bounds xs
       (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
   ok
@@ -162,12 +165,12 @@ boundGE x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> boundGT 5 arr
+-- >>> boundGTA 5 arr
 -- 3
--- >>> boundGT 9 arr
+-- >>> boundGTA 9 arr
 -- 5
-boundGT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundGT x xs = do
+boundGTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundGTA x xs = do
   let (lb, ub) = bounds xs
       (_, !ok) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
   ok
@@ -176,12 +179,12 @@ boundGT x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> boundLT 5 arr
+-- >>> boundLTA 5 arr
 -- 1
--- >>> boundLT 1 arr
+-- >>> boundLTA 1 arr
 -- -1
-boundLT :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundLT x xs = do
+boundLTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundLTA x xs = do
   let (lb, ub) = bounds xs
       (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i >= x)
   ng
@@ -190,12 +193,12 @@ boundLT x xs = do
 --
 -- >>> import Data.Array.IArray (listArray)
 -- >>> let arr = listArray (0, 4) [1,3,5,7,9] :: Data.Array.Array Int Int
--- >>> boundLE 5 arr
+-- >>> boundLEA 5 arr
 -- 2
--- >>> boundLE 0 arr
+-- >>> boundLEA 0 arr
 -- -1
-boundLE :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
-boundLE x xs = do
+boundLEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
+boundLEA x xs = do
   let (lb, ub) = bounds xs
       (!ng, _) = bisect (pred lb, succ ub) (\i -> xs ! i > x)
   ng

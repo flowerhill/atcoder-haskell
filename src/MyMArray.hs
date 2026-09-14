@@ -107,23 +107,6 @@ twoDimensionalSum arr = listArray bounds_ $ VU.toList $ VU.concat rowSums
 
 {-- MArray用 --}
 
--- | 範囲内なら Just、範囲外なら Nothing を返す（モナド版）
---
--- >>> import Data.Array.IO (IOUArray, newListArray)
--- >>> a <- newListArray (0,2) [1,2,3 :: Int] :: IO (IOUArray Int Int)
--- >>> a !? 1
--- Just 2
--- >>> a !? 5
--- Nothing
-(!?) :: (Ix i, MArray a e m) => a i e -> i -> m (Maybe e)
-(!?) arr idx = do
-  bounds' <- getBounds arr
-  if inRange bounds' idx
-    then do
-      val <- readArray arr idx
-      return (Just val)
-    else return Nothing
-
 -- | 範囲内なら書き込んで True、範囲外なら False を返す
 --
 -- >>> import Data.Array.IO (IOUArray, newListArray)

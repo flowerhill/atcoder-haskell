@@ -20,10 +20,6 @@ import Data.Primitive.MutVar (MutVar, modifyMutVar', newMutVar, readMutVar)
 -- >>> import Data.Array.ST (STUArray, runSTUArray)
 -- >>> import Control.Monad.ST (ST, runST)
 
--- | modifyArray の互換実装 (array < 0.5.6.0 向け)
-modifyArray :: (MArray a e m, Ix i) => a i e -> i -> (e -> e) -> m ()
-modifyArray arr i f = readArray arr i >>= writeArray arr i . f
-
 {- 重み付き Union-Find (符号付き)
    ref: https://qiita.com/drken/items/cce6fc5c579051e64fab
 
