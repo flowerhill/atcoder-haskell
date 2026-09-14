@@ -179,7 +179,8 @@ make submit-oj
 - **Encode.hs**: ランレングス圧縮
 - **IntMultiSet.hs**: 整数のマルチセット
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
-- **MyArray.hs / MyMArray.hs / MyVector.hs / MyMVector.hs**: 配列・可変配列・ベクタ・可変ベクタ操作
+- **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
+- **LIS.hs**: 各位置で終わる最長増加部分列（LIS）/ 始まる最長減少部分列（LDS）の長さ
 - **MyList.hs**: リスト操作拡張
 
 ## ⚙️ 設定

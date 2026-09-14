@@ -3,8 +3,7 @@
 
 module MyMArray where
 
-import BSearch (bisectM)
-import Control.Monad (foldM, forM_)
+import Control.Monad (forM_)
 import Control.Monad.ST
 import Data.Array.IArray (IArray (bounds), elems, listArray)
 import Data.Array.IO
@@ -280,43 +279,7 @@ imos2DHalfOpen bnd@((xlo, ylo), (xhi, yhi)) qs = runSTUArray $ do
       modifyArray2 diff (x, y) prev (+)
   return diff
 
-{-- LIS / LDS --}
-
--- | 各位置 i で終わる最長増加部分列（狭義）の長さを返す (O(N log N))。
--- patience sorting の tails を STUArray で持ち、各要素で lower bound を二分探索する。
--- 現在長 len は foldM で引き回すので可変セルは不要。
---
--- >>> elems (lisLengths [3,1,4,1,5,9,2,6])
--- [1,1,2,1,3,4,2,4]
--- >>> elems (lisLengths [5,4,3,2,1])
--- [1,1,1,1,1]
-lisLengths :: [Int] -> UArray Int Int
-lisLengths xs = runSTUArray $ do
-  tails <- newArray (0, n - 1) maxBound :: ST s (STUArray s Int Int)
-  result <- newArray (0, n - 1) 0 :: ST s (STUArray s Int Int)
-  let step len i = do
-        let x = VU.unsafeIndex v i
-        -- tails[0..len) のうち x 以上が初めて現れる位置 pos（無ければ len）
-        (_, pos) <- bisectM (-1, len) $ \mid -> (>= x) <$> readArray tails mid
-        writeArray tails pos x
-        writeArray result i (pos + 1)
-        return $ max len (pos + 1)
-  _ <- foldM step 0 [0 .. n - 1]
-  return result
-  where
-    -- 入力を一度だけ Vector に載せる（length の走査と zip のタプル確保を省く）
-    v = VU.fromList xs
-    n = VU.length v
-
--- | 各位置 i から始まる最長減少部分列（狭義）の長さを返す (O(N log N))。
--- 反転して LIS を取り、結果を反転して戻す。
---
--- >>> elems (ldsLengths [3,1,4,1,5,9,2,6])
--- [2,1,2,1,2,2,1,1]
-ldsLengths :: [Int] -> UArray Int Int
-ldsLengths xs = listArray (0, n - 1) . reverse . elems . lisLengths $ reverse xs
-  where
-    n = length xs
+{-- STUArray の確保 --}
 
 -- | ST 内で STUArray を確保する（型注釈なしで使えるようにした newArray）
 --
