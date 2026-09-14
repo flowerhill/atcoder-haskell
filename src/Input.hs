@@ -5,14 +5,12 @@
 module Input where
 
 import Control.Monad (replicateM)
-import Data.Bool (bool)
 import qualified Data.ByteString.Char8 as BC
 import Data.Char (ord)
 import qualified Data.Char as C
 import qualified Data.List as L
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
-import Numeric (showFFloat)
 
 -- | 標準入力から Int を1つ読み込む
 getInt :: IO Int
@@ -104,90 +102,3 @@ readTuple :: String -> (String, Int)
 readTuple input = (str, read num :: Int)
   where
     [str, num] = words input
-
--- | 時刻 time が [start, end) の範囲内か（24時間循環対応）
---
--- >>> withInTime 10 20 15
--- True
--- >>> withInTime 10 20 25
--- False
--- >>> withInTime 22 6 23
--- True
-withInTime :: Int -> Int -> Int -> Bool
-withInTime start end time -- end 引数を追加
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-
--- | 時刻 time が start から diff 時間の範囲内か（24時間循環対応）
---
--- >>> withInTimeDiff 22 8 2
--- True
--- >>> withInTimeDiff 10 4 15
--- False
-withInTimeDiff :: Int -> Int -> Int -> Bool
-withInTimeDiff start diff time
-  | start <= end = time >= start && time < end
-  | otherwise = time >= start || time < end
-  where
-    end = (start + diff) `mod` 24
-
--- | Bool を "Yes"/"No" として標準出力する
-printYn :: Bool -> IO ()
-printYn f = putStrLn $ bool "No" "Yes" f
-
--- | リストを空白区切りで1行標準出力する
-printList :: (Show a) => [a] -> IO ()
-printList lst = putStrLn $ unwords $ map show lst
-
--- | リストを1要素1行で標準出力する。
--- printList と違い縦に並べる。putStrLn の繰り返しを避けて 1 回の putStr にまとめる。
---
--- >>> printLines [1, 2, 3 :: Int]
--- 1
--- 2
--- 3
--- >>> printLines ([] :: [Int])
-printLines :: (Show a) => [a] -> IO ()
-printLines = putStr . unlines . map show
-
--- | グリッド（リストのリスト）を1行ずつ空白区切りで標準出力する。
--- 行ごとに putStrLn すると 1 行ごとにフラッシュ判定が走るので、
--- unlines でまとめて 1 回の putStr に流す。
---
--- >>> printGrid [[1, 2, 3], [4, 5, 6 :: Int]]
--- 1 2 3
--- 4 5 6
--- >>> printGrid ([] :: [[Int]])
-printGrid :: (Show a) => [[a]] -> IO ()
-printGrid = putStr . unlines . map (unwords . map show)
-
--- | タプルのリストを1行1組・空白区切りで標準出力する
---
--- >>> printPairs [(1, 2), (3, 4 :: Int)]
--- 1 2
--- 3 4
--- >>> printPairs ([] :: [(Int, Int)])
-printPairs :: (Show a, Show b) => [(a, b)] -> IO ()
-printPairs = putStr . unlines . map (\(a, b) -> show a ++ " " ++ show b)
-
--- | Double を小数点以下 d 桁の固定小数表記にする。
--- show だと 1.0e-9 のような指数表記になり実数ジャッジに通らないので、
--- 誤差許容付きの出力にはこちらを使う。
---
--- >>> showFixed 3 3.14159
--- "3.142"
--- >>> showFixed 6 (-1.5)
--- "-1.500000"
--- >>> showFixed 9 1e-9
--- "0.000000001"
-showFixed :: Int -> Double -> String
-showFixed d v = showFFloat (Just d) v ""
-
--- | Double のリストを小数点以下 d 桁で1行1個ずつ標準出力する
---
--- >>> printLinesFixed 2 [1, 2.346]
--- 1.00
--- 2.35
--- >>> printLinesFixed 2 []
-printLinesFixed :: Int -> [Double] -> IO ()
-printLinesFixed d = putStr . unlines . map (showFixed d)

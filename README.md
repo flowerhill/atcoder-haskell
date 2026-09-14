@@ -169,7 +169,8 @@ make submit-oj
 
 - **Lib.hs**: `solve` のひな形
 - **Input.hs**: 入力処理のヘルパー関数
-- **Math.hs**: 数論・整数演算（素数判定・篩・nCr・拡張ユークリッドなど）
+- **Output.hs**: 出力処理（`printYn`・`printGrid`・`printMatrix`・固定小数表記など）
+- **Math.hs**: 数論・整数演算（素数判定・篩・nCr・拡張ユークリッドなど）、24 時間の時刻範囲判定
 - **ModInt.hs**: mod 10^9+7 のモジュラ演算と `IntMod` 型
 - **Geometry.hs**: 平面幾何（距離・座標変換・回転）
 - **MyString.hs**: 文字列操作（回文判定・部分文字列）
@@ -180,6 +181,7 @@ make submit-oj
 - **IntMultiSet.hs**: 整数のマルチセット
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
 - **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
+- **CumSum.hs**: 累積和（1 次元・2 次元）といもす法
 - **LIS.hs**: 各位置で終わる最長増加部分列（LIS）/ 始まる最長減少部分列（LDS）の長さ
 - **MyList.hs**: リスト操作拡張
 

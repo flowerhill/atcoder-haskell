@@ -27,6 +27,7 @@ extra-source-files:
 library
     exposed-modules:  Lib
                       Input
+                      Output
                       Math
                       ModInt
                       Geometry
@@ -36,6 +37,7 @@ library
                       MyMArray
                       MyMVector
                       LIS
+                      CumSum
                       BSearch
                       BSearchArray
                       BSearchVector

@@ -339,3 +339,29 @@ toDigits n a = reverse $ L.unfoldr f a
 -- 5
 fromDigits :: (Foldable t, Num a) => a -> t a -> a
 fromDigits n = L.foldl' (\acc b -> acc * n + b) 0
+
+-- | 時刻 time が [start, end) の範囲内か（24時間循環対応）
+--
+-- >>> withInTime 10 20 15
+-- True
+-- >>> withInTime 10 20 25
+-- False
+-- >>> withInTime 22 6 23
+-- True
+withInTime :: Int -> Int -> Int -> Bool
+withInTime start end time -- end 引数を追加
+  | start <= end = time >= start && time < end
+  | otherwise = time >= start || time < end
+
+-- | 時刻 time が start から diff 時間の範囲内か（24時間循環対応）
+--
+-- >>> withInTimeDiff 22 8 2
+-- True
+-- >>> withInTimeDiff 10 4 15
+-- False
+withInTimeDiff :: Int -> Int -> Int -> Bool
+withInTimeDiff start diff time
+  | start <= end = time >= start && time < end
+  | otherwise = time >= start || time < end
+  where
+    end = (start + diff) `mod` 24
