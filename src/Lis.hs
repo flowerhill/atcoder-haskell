@@ -1,4 +1,4 @@
-module LIS where
+module Lis where
 
 import BSearch (bisectM)
 import Control.Monad (foldM)

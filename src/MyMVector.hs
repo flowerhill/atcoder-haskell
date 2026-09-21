@@ -9,7 +9,7 @@ import qualified Data.Vector.Unboxed.Mutable as VUM
 -- 方針:
 --   swap / modify / grow / slice は VUM に既にあるので再実装しない。
 --   ここには vector に無い安全アクセサを置く。
---   可変ベクタを内部で使うアルゴリズムは、話題ごとのモジュール（LIS など）に置く。
+--   可変ベクタを内部で使うアルゴリズムは、話題ごとのモジュール（Lis など）に置く。
 
 {-- 安全アクセサ（範囲外で例外を投げず Maybe/Bool を返す） --}
 

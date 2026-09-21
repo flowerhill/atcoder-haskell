@@ -182,7 +182,7 @@ make submit-oj
 - **UnionFind.hs / WUnionFind.hs**: Union-Find / 重み付き Union-Find
 - **MyArray.hs / MyMArray.hs / MyMVector.hs**: 配列・可変配列・可変ベクタ操作
 - **CumSum.hs**: 累積和（1 次元・2 次元）といもす法
-- **LIS.hs**: 各位置で終わる最長増加部分列（LIS）/ 始まる最長減少部分列（LDS）の長さ
+- **Lis.hs**: 各位置で終わる最長増加部分列（LIS）/ 始まる最長減少部分列（LDS）の長さ
 - **MyList.hs**: リスト操作拡張
 
 ## ⚙️ 設定
