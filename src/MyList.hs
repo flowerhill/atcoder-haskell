@@ -249,6 +249,25 @@ distinctPermutations vs = permute (length vs) (sort vs)
 sublists :: [a] -> [[a]]
 sublists = concatMap (filter (not . null) . inits) . tails
 
+-- | 各開始位置から最大 k 要素を切り出したリストを返す（幅 k のスライド窓）。
+-- 末尾付近は k に満たない分を切り詰めた窓も含める。O(N * min(N, k))（出力量そのもの）
+--
+-- tails は接尾辞を共有するので各位置へ O(1) で進め、take k が窓 1 本あたり O(k)。
+-- 窓をちょうど k 要素に限るなら "MyString".@substringK@ を使うこと。
+--
+-- >>> slidingTake 2 "abcdabc"
+-- ["ab","bc","cd","da","ab","bc","c"]
+-- >>> slidingTake 3 [1,2,3 :: Int]
+-- [[1,2,3],[2,3],[3]]
+-- >>> slidingTake 5 "ab"
+-- ["ab","b"]
+-- >>> slidingTake 2 ""
+-- []
+slidingTake :: Int -> [a] -> [[a]]
+slidingTake k xs
+  | k <= 0 = error $ "slidingTake: non-positive window k=" ++ show k
+  | otherwise = map (take k) . init $ tails xs
+
 -- | リストからちょうど j 個選んだときの合計値をすべて列挙する
 --
 -- >>> combSums [3,8] 1
