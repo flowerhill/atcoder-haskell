@@ -9,6 +9,7 @@ import Control.Monad.ST.Strict (ST)
 import qualified Data.Array.IArray as IA
 import Data.Array.ST (STUArray, newArray, readArray, runSTUArray, writeArray)
 import Data.Array.Unboxed (UArray)
+import Data.Char (chr, isAsciiLower, isAsciiUpper, isDigit, ord)
 import qualified Data.IntSet as IS
 import qualified Data.List as L
 import qualified Data.Vector.Unboxed as VU
@@ -339,6 +340,56 @@ toDigits n a = reverse $ L.unfoldr f a
 -- 5
 fromDigits :: (Foldable t, Num a) => a -> t a -> a
 fromDigits n = L.foldl' (\acc b -> acc * n + b) 0
+
+-- | b 進数表記の文字列を整数に変換する（'0'-'9', 'a'-'z' / 'A'-'Z' を 0〜35 として扱う）
+--
+-- >>> readBase 8 "21" :: Int
+-- 17
+-- >>> readBase 2 "1011" :: Int
+-- 11
+-- >>> readBase 16 "fF" :: Int
+-- 255
+-- >>> readBase 36 "z" :: Int
+-- 35
+-- >>> readBase 10 "0" :: Int
+-- 0
+-- >>> readBase 2 (replicate 70 '1') :: Integer
+-- 1180591620717411303423
+readBase :: (Integral a) => a -> String -> a
+readBase b = fromDigits b . map digit
+  where
+    digit c
+      | d < b = d
+      | otherwise = error $ "readBase: digit " ++ show c ++ " out of range for base " ++ show (toInteger b)
+      where
+        d = fromIntegral $ value c
+    value c
+      | isDigit c = ord c - ord '0'
+      | isAsciiLower c = ord c - ord 'a' + 10
+      | isAsciiUpper c = ord c - ord 'A' + 10
+      | otherwise = error $ "readBase: invalid character " ++ show c
+
+-- | 非負整数を b 進数表記の文字列に変換する（10 以上の桁は 'a'-'z'、b は 2〜36）
+--
+-- >>> showBase 9 (17 :: Int)
+-- "18"
+-- >>> showBase 2 (11 :: Int)
+-- "1011"
+-- >>> showBase 16 (255 :: Int)
+-- "ff"
+-- >>> showBase 36 (35 :: Int)
+-- "z"
+-- >>> showBase 8 (0 :: Int)
+-- "0"
+-- >>> showBase 2 (2 ^ 70 - 1 :: Integer)
+-- "1111111111111111111111111111111111111111111111111111111111111111111111"
+showBase :: (Integral a) => a -> a -> String
+showBase b x
+  | b < 2 || b > 36 = error $ "showBase: base " ++ show (toInteger b) ++ " out of range [2, 36]"
+  | x < 0 = error $ "showBase: negative value " ++ show (toInteger x)
+  | otherwise = map (toChar . fromIntegral) $ toDigits b x
+  where
+    toChar d = chr $ if d < 10 then ord '0' + d else ord 'a' + d - 10
 
 -- | 時刻 time が [start, end) の範囲内か（24時間循環対応）
 --
