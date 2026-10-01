@@ -10,8 +10,10 @@ module WUnionFind where
 
 import Control.Monad (when)
 import Control.Monad.Primitive (PrimMonad, PrimState)
+import Control.Monad.ST (ST)
 import Data.Array.Base (MArray (..), readArray, writeArray)
 import Data.Array.MArray (newListArray)
+import Data.Array.ST (STUArray)
 import Data.Ix (Ix, range, rangeSize)
 import Data.Primitive.MutVar (MutVar, modifyMutVar', newMutVar, readMutVar)
 
@@ -64,6 +66,18 @@ newWUF bnds = do
   off <- newArray bnds 0
   nc <- newMutVar (rangeSize bnds)
   return $ WeightedUnionFind par sz sg off nc
+
+-- | STUArray 版 newWUF。ST 内で使うときの型注釈を省くための薄いラッパ。
+--
+-- >>> :{
+-- runST $ do
+--   uf <- newWUFST (1 :: Int, 5)
+--   uniteSumWUF uf 1 2 10
+--   relationWUF uf 1 2
+-- :}
+-- Just (-1,10)
+newWUFST :: (Ix i, MArray (STUArray s) i (ST s)) => (i, i) -> ST s (WeightedUnionFind (STUArray s) s i)
+newWUFST = newWUF
 
 -- | 経路圧縮付き find
 -- 返り値 (root, s, o) は A_x = s * A_root + o を意味する
