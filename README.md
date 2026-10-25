@@ -133,7 +133,7 @@ solve :: [Int] -> Int
 solve = sum -- ソリューションを実装
 ```
 
-必要なモジュールだけを直接 import する（例: `import Math (powMod)`）。
+必要なモジュールだけを直接 import する（例: `import Math (exEuclid)`）。
 提出時はバンドラが import したモジュールとその依存だけを 1 ファイルにまとめる。
 
 ### 3. テスト
@@ -171,7 +171,7 @@ make submit-oj
 - **Input.hs**: 入力処理のヘルパー関数
 - **Output.hs**: 出力処理（`printYn`・`printGrid`・`printMatrix`・固定小数表記など）
 - **Math.hs**: 数論・整数演算（素数判定・篩・nCr・拡張ユークリッドなど）、24 時間の時刻範囲判定
-- **ModInt.hs**: mod 10^9+7 のモジュラ演算と `IntMod` 型
+- **ModInt.hs**: 法を型に載せた剰余演算（`IntMod p`・`ModInt998244353`・`ModInt1000000007`）
 - **Geometry.hs**: 平面幾何（距離・座標変換・回転）
 - **MyString.hs**: 文字列操作（回文判定・部分文字列）
 - **Debug.hs**: DEBUG 環境変数連動のトレース
