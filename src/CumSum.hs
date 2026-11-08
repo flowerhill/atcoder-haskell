@@ -61,6 +61,33 @@ twoDimensionalSum arr = listArray bounds_ $ VU.toList $ VU.concat rowSums
     rows = [VU.slice (i * w) w src | i <- [0 .. h - 1]]
     rowSums = scanl1 (VU.zipWith (+)) $ map (VU.scanl1 (+)) rows
 
+-- | twoDimensionalSum の結果から閉矩形 [r1, r2] × [c1, c2] の和を O(1) で取り出す。
+-- 第 2・第 3 引数は矩形の左上・右下のマス。
+-- 下限より外の添字（r1 - 1 や c1 - 1 が bounds の外に出る場合）は 0 として扱うので、
+-- 呼び出し側で境界分岐を書かなくてよい。bounds の下限は配列から取るため 0 始まりでも通る。
+--
+-- >>> import Data.Array.Unboxed (UArray, listArray)
+-- >>> let cs = twoDimensionalSum (listArray ((1,1),(3,3)) [1..9] :: UArray (Int,Int) Int)
+-- >>> rangeSum2D cs (1,1) (3,3)
+-- 45
+-- >>> rangeSum2D cs (2,2) (3,3)
+-- 28
+-- >>> rangeSum2D cs (2,2) (2,2)
+-- 5
+--
+-- 0 始まりの配列でも下限を bounds から取るので通る
+-- >>> let cs0 = twoDimensionalSum (listArray ((0,0),(1,1)) [1,2,3,4] :: UArray (Int,Int) Int)
+-- >>> rangeSum2D cs0 (0,0) (1,1)
+-- 10
+-- >>> rangeSum2D cs0 (1,0) (1,1)
+-- 7
+rangeSum2D :: UArray (Int, Int) Int -> (Int, Int) -> (Int, Int) -> Int
+rangeSum2D cs (r1, c1) (r2, c2) =
+  at r2 c2 - at (r1 - 1) c2 - at r2 (c1 - 1) + at (r1 - 1) (c1 - 1)
+  where
+    ((r0, c0), _) = bounds cs
+    at r c = if r < r0 || c < c0 then 0 else cs ! (r, c)
+
 {-- いもす法 --}
 
 -- | 1次元いもす法: 閉区間 [l, r] への加算クエリを処理し、
