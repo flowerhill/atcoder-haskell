@@ -31,6 +31,11 @@
               pkgs.haskell.compiler.ghc984
               pkgs.cabal-install
               pkgs.haskell.packages.ghc984.haskell-language-server
+              # doctest は GHC API を静的リンクするため、boot package の unit-id が一致する
+              # 「同じ GHC インストール」でビルドされたものでないと -package-id を解決できない。
+              # ~/.cabal/bin/doctest は ghcup の GHC 製なので devshell 内では使えず、
+              # ここで入れて PATH を先にすることで devshell 内外どちらでも make doctest が通る。
+              pkgs.haskell.packages.ghc984.doctest
             ];
             shellHook = ''
               export PATH=${ojEnv}/bin:$PATH
