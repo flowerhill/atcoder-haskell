@@ -38,7 +38,7 @@ import Data.Foldable.Extra (toList)
 import qualified Data.Heap as H
 import qualified Data.IntMap.Strict as IM
 import qualified Data.IntSet as IS
-import Data.List (foldl')
+import Data.List (elemIndex, foldl')
 import Data.List.Extra (chunksOf, maximumOn)
 import Data.STRef (modifySTRef', newSTRef, readSTRef, writeSTRef)
 import qualified Data.Sequence as Seq
@@ -264,6 +264,40 @@ bfsMulti bnds getNext starts = runSTUArray $ do
             writeSTRef queueRef $ rest Seq.>< Seq.fromList newNeighbors
             loop
   loop
+
+-- | BFS 経路復元版（各頂点に「そこまでの経路」を持たせて最短経路を復元する）。
+-- start から isGoal を満たす最初の頂点までの最短経路を両端を含めて返す。
+-- 到達できなければ Nothing。
+-- 経路を出力する問題（迷路の手順、木の 2 点間パス、状態拡張 BFS の操作列）用。
+-- 経路は逆順リストで持ち、親と末尾を共有するので 1 頂点あたり O(1)。
+-- 訪問済みは STUArray Bool。O(V + E)。
+--
+-- >>> bfsRestorePath (1,5) (\x -> case x of 1 -> [2,3]; 2 -> [4]; 3 -> [4]; 4 -> [5]; _ -> []) 1 (== 5)
+-- Just [1,2,4,5]
+-- >>> bfsRestorePath (1,3) (\x -> [x + 1]) 1 (== 1)
+-- Just [1]
+-- >>> bfsRestorePath (1,3) (const []) 1 (== 3)
+-- Nothing
+-- >>> bfsRestorePath ((0,0),(1,2)) (\(r,c) -> [(r,c+1),(r+1,c)]) (0,0) (== (1,2))
+-- Just [(0,0),(0,1),(0,2),(1,2)]
+{-# INLINE bfsRestorePath #-}
+bfsRestorePath :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> (a -> Bool) -> Maybe [a]
+bfsRestorePath bnds getNext start isGoal = runST $ do
+  visited <- newArray bnds False :: ST s (STUArray s a Bool)
+  writeArray visited start True
+  let visit n = do
+        seen <- readArray visited n
+        if seen then return False else writeArray visited n True >> return True
+      -- キューの要素は (頂点, start からその頂点の手前までの経路を逆順にしたもの)
+      loop [] [] = return Nothing
+      loop [] nxt = loop (reverse nxt) []
+      loop ((v, path) : vs) nxt
+        | isGoal v = return $ Just (reverse (v : path))
+        | otherwise = do
+            ns <- filterM visit (filter (inRange bnds) (getNext v))
+            let path' = v : path
+            loop vs (reverse [(n, path') | n <- ns] ++ nxt)
+  loop [(start, [])] []
 
 -- | 0-1 BFS
 --
@@ -856,7 +890,13 @@ printIntGrid grid = traverse_ (putStrLn . unwords . map show) $ chunksOf w (elem
     ((_, w1), (_, w2)) = bounds grid
     w = w2 + 1 - w1
 
-data LRUD = L | R | U | D deriving (Show, Eq, Ord, Ix, Enum)
+-- | 向きの直和型。導出した Ord / Bounded の並びは L < R < U < D。
+--
+-- >>> (minBound, maxBound) :: (LRUD, LRUD)
+-- (L,D)
+-- >>> concatMap show [U, D, L, R]
+-- "UDLR"
+data LRUD = L | R | U | D deriving (Show, Eq, Ord, Ix, Enum, Bounded)
 
 lrud :: [(Integer, Integer)]
 left :: (Integer, Integer)
@@ -864,6 +904,42 @@ right :: (Integer, Integer)
 up :: (Integer, Integer)
 down :: (Integer, Integer)
 lrud@[left, right, up, down] = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+
+-- | 4 方向の (向き番号, (行の差, 列の差))。番号 0..3 = U, D, L, R。
+-- 向きを状態に持たせるグリッド BFS や、移動手順の出力に使う。
+-- 既存の lrud / LRUD とは並び（L, R, U, D）が異なるので混ぜないこと。
+--
+-- >>> dirs4
+-- [(0,(-1,0)),(1,(1,0)),(2,(0,-1)),(3,(0,1))]
+dirs4 :: [(Int, (Int, Int))]
+dirs4 = zip [0 ..] [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+-- | 向き番号を文字に変換する（0..3 → 'U','D','L','R'）。
+--
+-- >>> map dirToChar [0 .. 3]
+-- "UDLR"
+dirToChar :: Int -> Char
+dirToChar d = "UDLR" !! d
+
+-- | 文字を向き番号に変換する（'U','D','L','R' → 0..3）。
+--
+-- >>> map charToDir "UDLR"
+-- [0,1,2,3]
+charToDir :: Char -> Int
+charToDir c = case elemIndex c "UDLR" of
+  Just d -> d
+  Nothing -> error $ "charToDir: unexpected char " ++ show c
+
+-- | 4 方向の (向き, (行の差, 列の差))。dirs4 の直和型版で、並びは U, D, L, R。
+-- 状態を (行, 列, LRUD) にするグリッド BFS 用。範囲は ((.., minBound), (.., maxBound)) で書き、
+-- 文字への変換は show（U → "U"）。
+--
+-- >>> dirsLRUD
+-- [(U,(-1,0)),(D,(1,0)),(L,(0,-1)),(R,(0,1))]
+-- >>> concatMap (show . fst) dirsLRUD
+-- "UDLR"
+dirsLRUD :: [(LRUD, (Int, Int))]
+dirsLRUD = [(U, (-1, 0)), (D, (1, 0)), (L, (0, -1)), (R, (0, 1))]
 
 -- | グリッドの連結成分数（'.'の島の数を数える用途など）
 --
