@@ -17,6 +17,7 @@ import Data.Vector.Unboxed qualified as VU
 -- Just 2
 -- >>> lookupGEIdxV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupGEIdxV #-}
 lookupGEIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
 lookupGEIdxV x xs
   | VU.null xs = Nothing
@@ -32,6 +33,7 @@ lookupGEIdxV x xs
 -- Just 3
 -- >>> lookupGTIdxV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupGTIdxV #-}
 lookupGTIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
 lookupGTIdxV x xs
   | VU.null xs = Nothing
@@ -47,6 +49,7 @@ lookupGTIdxV x xs
 -- Just 1
 -- >>> lookupLTIdxV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupLTIdxV #-}
 lookupLTIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
 lookupLTIdxV x xs
   | VU.null xs = Nothing
@@ -62,6 +65,7 @@ lookupLTIdxV x xs
 -- Just 2
 -- >>> lookupLEIdxV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupLEIdxV #-}
 lookupLEIdxV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe Int
 lookupLEIdxV x xs
   | VU.null xs = Nothing
@@ -77,6 +81,7 @@ lookupLEIdxV x xs
 -- Just 5
 -- >>> lookupGEV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupGEV #-}
 lookupGEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
 lookupGEV x xs = do
   i <- lookupGEIdxV x xs
@@ -88,6 +93,7 @@ lookupGEV x xs = do
 -- Just 7
 -- >>> lookupGTV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupGTV #-}
 lookupGTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
 lookupGTV x xs = do
   i <- lookupGTIdxV x xs
@@ -99,6 +105,7 @@ lookupGTV x xs = do
 -- Just 3
 -- >>> lookupLTV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupLTV #-}
 lookupLTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
 lookupLTV x xs = do
   i <- lookupLTIdxV x xs
@@ -110,6 +117,7 @@ lookupLTV x xs = do
 -- Just 5
 -- >>> lookupLEV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- Nothing
+{-# INLINE lookupLEV #-}
 lookupLEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Maybe e
 lookupLEV x xs = do
   i <- lookupLEIdxV x xs
@@ -121,6 +129,7 @@ lookupLEV x xs = do
 -- 2
 -- >>> boundGEV 10 (VU.fromList [1,3,5,7,9 :: Int])
 -- 5
+{-# INLINE boundGEV #-}
 boundGEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
 boundGEV x xs
   | VU.null xs = 0
@@ -134,6 +143,7 @@ boundGEV x xs
 -- 3
 -- >>> boundGTV 9 (VU.fromList [1,3,5,7,9 :: Int])
 -- 5
+{-# INLINE boundGTV #-}
 boundGTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
 boundGTV x xs
   | VU.null xs = 0
@@ -147,6 +157,7 @@ boundGTV x xs
 -- 1
 -- >>> boundLTV 1 (VU.fromList [1,3,5,7,9 :: Int])
 -- -1
+{-# INLINE boundLTV #-}
 boundLTV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
 boundLTV x xs
   | VU.null xs = -1
@@ -160,6 +171,7 @@ boundLTV x xs
 -- 2
 -- >>> boundLEV 0 (VU.fromList [1,3,5,7,9 :: Int])
 -- -1
+{-# INLINE boundLEV #-}
 boundLEV :: (VU.Unbox e, Ord e) => e -> VU.Vector e -> Int
 boundLEV x xs
   | VU.null xs = -1

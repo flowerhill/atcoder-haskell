@@ -54,6 +54,7 @@ import qualified Data.Set as S
 -- [2]
 -- >>> buildG (1,3) [[1,2],[2,3]] ! 3
 -- []
+{-# INLINE buildG #-}
 buildG :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG bnds edges = accumArray (flip (:)) [] bnds edges'
   where
@@ -63,6 +64,7 @@ buildG bnds edges = accumArray (flip (:)) [] bnds edges'
 --
 -- >>> buildG2 (1,3) [[1,2],[2,3]] ! 2
 -- [3,1]
+{-# INLINE buildG2 #-}
 buildG2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [a]
 buildG2 bnds edges = accumArray (flip (:)) [] bnds edges'
   where
@@ -72,6 +74,7 @@ buildG2 bnds edges = accumArray (flip (:)) [] bnds edges'
 --
 -- >>> buildGW (1,3) [[1,2,5],[2,3,3]] ! 1
 -- [(2,5)]
+{-# INLINE buildGW #-}
 buildGW :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW bnds edges = accumArray (flip (:)) [] bnds edges'
   where
@@ -81,6 +84,7 @@ buildGW bnds edges = accumArray (flip (:)) [] bnds edges'
 --
 -- >>> buildGW2 (1,3) [[1,2,5],[2,3,3]] ! 2
 -- [(3,3),(1,5)]
+{-# INLINE buildGW2 #-}
 buildGW2 :: forall a. (Ix a) => (a, a) -> [[a]] -> Array a [(a, a)]
 buildGW2 bnds edges = accumArray (flip (:)) [] bnds edges'
   where
@@ -98,6 +102,7 @@ buildGW2 bnds edges = accumArray (flip (:)) [] bnds edges'
 -- >>> import qualified Data.Set as S
 -- >>> S.toList $ bfsImmutable (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1
 -- [1,2,3]
+{-# INLINE bfsImmutable #-}
 bfsImmutable :: forall a. (Ord a) => (a -> [a]) -> a -> S.Set a
 bfsImmutable getNext start = go S.empty (Seq.singleton start)
   where
@@ -121,6 +126,7 @@ bfsImmutable getNext start = go S.empty (Seq.singleton start)
 -- >>> import qualified Data.Set as S
 -- >>> S.toList $ bfsImmutableMulti (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) S.empty [1,3]
 -- [1,2,3,4]
+{-# INLINE bfsImmutableMulti #-}
 bfsImmutableMulti :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
 bfsImmutableMulti getNext initVisited initQueue = go initVisited (Seq.fromList initQueue)
   where
@@ -143,6 +149,7 @@ bfsImmutableMulti getNext initVisited initQueue = go initVisited (Seq.fromList i
 -- True
 -- >>> bfsReach (1,4) (\x -> case x of 1 -> [2,3]; 2 -> [1]; 3 -> [1]; _ -> []) 1 ! 4
 -- False
+{-# INLINE bfsReach #-}
 bfsReach :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
 bfsReach bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
@@ -173,6 +180,7 @@ bfsReach bnds getNext start = runSTUArray $ do
 -- True
 -- >>> bfsReachMulti (1,4) (\x -> []) [1] ! 2
 -- False
+{-# INLINE bfsReachMulti #-}
 bfsReachMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
 bfsReachMulti bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
@@ -203,6 +211,7 @@ bfsReachMulti bnds getNext initNodes = runSTUArray $ do
 -- 3
 -- >>> bfs (1,4) (\x -> []) 1 ! 4
 -- -1
+{-# INLINE bfs #-}
 bfs :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Int
 bfs bnds getNext start = runSTUArray $ do
   distance <- newArray bnds (-1)
@@ -236,6 +245,7 @@ bfs bnds getNext start = runSTUArray $ do
 -- >>> import Data.Array.Unboxed ((!))
 -- >>> bfsMulti (1,4) (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) [1,3] ! 4
 -- 1
+{-# INLINE bfsMulti #-}
 bfsMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Int
 bfsMulti bnds getNext starts = runSTUArray $ do
   distance <- newArray bnds (-1)
@@ -308,6 +318,7 @@ bfsRestorePath bnds getNext start isGoal = runST $ do
 -- 使用例:
 --   let dist = bfs01 nextStates (0, maxState) [start]
 --   where nextStates v = [(u, 0_or_1), ...]
+{-# INLINE bfs01 #-}
 bfs01 :: forall a. (Ix a) => (a -> [(a, Int)]) -> (a, a) -> [a] -> UArray a Int
 bfs01 nextStates (lower, upper) v0s = runSTUArray $ do
   dist <- newArray (lower, upper) maxBound
@@ -349,13 +360,13 @@ bfs01 nextStates (lower, upper) v0s = runSTUArray $ do
 -- >>> import qualified Data.Set as S
 -- >>> S.toList $ dfsImmutable (\x -> case x of 1 -> [2,3]; 2 -> []; 3 -> []; _ -> []) S.empty 1
 -- [1,2,3]
+{-# INLINE dfsImmutable #-}
 dfsImmutable :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> a -> S.Set a
-dfsImmutable getNext visited start
-  | S.member start visited = visited
-  | otherwise =
-      let visited' = S.insert start visited
-          neighbors = getNext start
-       in foldl' (dfsImmutable getNext) visited' neighbors
+dfsImmutable getNext = go
+  where
+    go visited start
+      | S.member start visited = visited
+      | otherwise = foldl' go (S.insert start visited) (getNext start)
 
 -- | DFS 到達集合・複数始点版（immutable）。初期 visited を渡せる。
 --
@@ -365,14 +376,14 @@ dfsImmutable getNext visited start
 -- >>> import qualified Data.Set as S
 -- >>> S.toList $ dfsImmutableMulti (\x -> case x of 1 -> [2]; 3 -> [4]; _ -> []) S.empty [1,3]
 -- [1,2,3,4]
+{-# INLINE dfsImmutableMulti #-}
 dfsImmutableMulti :: forall a. (Ord a) => (a -> [a]) -> S.Set a -> [a] -> S.Set a
-dfsImmutableMulti _ visited [] = visited
-dfsImmutableMulti getNext visited (curr : rest)
-  | S.member curr visited = dfsImmutableMulti getNext visited rest
-  | otherwise =
-      let visited' = S.insert curr visited
-          neighbors = getNext curr
-       in dfsImmutableMulti getNext visited' (neighbors ++ rest)
+dfsImmutableMulti getNext = go
+  where
+    go visited [] = visited
+    go visited (curr : rest)
+      | S.member curr visited = go visited rest
+      | otherwise = go (S.insert curr visited) (getNext curr ++ rest)
 
 -- | DFS 到達判定・単始点版（mutable）。到達した頂点が True。
 --
@@ -381,6 +392,7 @@ dfsImmutableMulti getNext visited (curr : rest)
 -- True
 -- >>> dfsReach (1,4) (\x -> case x of 1 -> [2]; 2 -> []; _ -> []) 1 ! 4
 -- False
+{-# INLINE dfsReach #-}
 dfsReach :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> UArray a Bool
 dfsReach bnds getNext start = runSTUArray $ do
   visited <- newArray bnds False
@@ -409,6 +421,7 @@ dfsReach bnds getNext start = runSTUArray $ do
 -- True
 -- >>> dfsReachMulti (1,4) (\x -> []) [1] ! 2
 -- False
+{-# INLINE dfsReachMulti #-}
 dfsReachMulti :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> UArray a Bool
 dfsReachMulti bnds getNext initNodes = runSTUArray $ do
   visited <- newArray bnds False
@@ -439,6 +452,7 @@ data PathNode a = PathNode a [a]
 -- [1,2]
 -- >>> dfsTree (1,3) (\x -> []) [1] ! 3
 -- []
+{-# INLINE dfsTree #-}
 dfsTree :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [a] -> Array a [a]
 dfsTree bnds getNext initNodes = runSTArray do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -473,6 +487,7 @@ dfsTree bnds getNext initNodes = runSTArray do
 -- 2
 -- >>> countComponentsDFS (1,3) (\x -> [])
 -- 3
+{-# INLINE countComponentsDFS #-}
 countComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 countComponentsDFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -496,6 +511,7 @@ countComponentsDFS bnds getNext = runST $ do
 --
 -- >>> countComponentsBFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
 -- 2
+{-# INLINE countComponentsBFS #-}
 countComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 countComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -535,6 +551,7 @@ countComponentsBFS bnds getNext = runST $ do
 --
 -- >>> map length $ getComponentsDFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
 -- [2,2]
+{-# INLINE getComponentsDFS #-}
 getComponentsDFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
 getComponentsDFS bnds getNext = runST do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -561,6 +578,7 @@ getComponentsDFS bnds getNext = runST do
 --
 -- >>> map length $ getComponentsBFS (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> [])
 -- [2,2]
+{-# INLINE getComponentsBFS #-}
 getComponentsBFS :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [[a]]
 getComponentsBFS bnds getNext = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -609,6 +627,7 @@ getComponentsBFS bnds getNext = runST $ do
 --
 -- >>> getComponentSizes (1,5) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4,5]; 4 -> [3]; 5 -> [3]; _ -> [])
 -- [3,2]
+{-# INLINE getComponentSizes #-}
 getComponentSizes :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> [Int]
 getComponentSizes bnds getNext = map length (getComponentsDFS bnds getNext)
 
@@ -616,6 +635,7 @@ getComponentSizes bnds getNext = map length (getComponentsDFS bnds getNext)
 --
 -- >>> getLargestComponent (1,5) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4,5]; 4 -> [3]; 5 -> [3]; _ -> [])
 -- 3
+{-# INLINE getLargestComponent #-}
 getLargestComponent :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> Int
 getLargestComponent bnds getNext =
   let sizes = getComponentSizes bnds getNext
@@ -629,6 +649,7 @@ getLargestComponent bnds getNext =
 --
 -- >>> getComponentSize (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) 1
 -- 2
+{-# INLINE getComponentSize #-}
 getComponentSize :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> Int
 getComponentSize bnds getNext v = runST $ do
   visited <- newArray bnds False :: ST s (STUArray s a Bool)
@@ -653,6 +674,7 @@ getComponentSize bnds getNext v = runST $ do
 -- True
 -- >>> isConnected (1,4) (\x -> case x of 1 -> [2]; 2 -> [1]; 3 -> [4]; 4 -> [3]; _ -> []) 1 3
 -- False
+{-# INLINE isConnected #-}
 isConnected :: forall a. (Ix a) => (a, a) -> (a -> [a]) -> a -> a -> Bool
 isConnected bnds getNext u v
   | not (inRange bnds u) || not (inRange bnds v) = False
@@ -680,6 +702,7 @@ isConnected bnds getNext u v
 --
 -- >>> countComponentsArrayDFS (buildG2 (1,4) [[1,2],[3,4]])
 -- 2
+{-# INLINE countComponentsArrayDFS #-}
 countComponentsArrayDFS :: forall a. (Ix a) => Array a [a] -> Int
 countComponentsArrayDFS graph =
   let bnds' = bounds graph
@@ -690,6 +713,7 @@ countComponentsArrayDFS graph =
 --
 -- >>> countComponentsArrayBFS (buildG2 (1,4) [[1,2],[3,4]])
 -- 2
+{-# INLINE countComponentsArrayBFS #-}
 countComponentsArrayBFS :: forall a. (Ix a) => Array a [a] -> Int
 countComponentsArrayBFS graph =
   let bnds' = bounds graph
@@ -700,6 +724,7 @@ countComponentsArrayBFS graph =
 --
 -- >>> map length $ getComponentsArray (buildG2 (1,4) [[1,2],[3,4]])
 -- [2,2]
+{-# INLINE getComponentsArray #-}
 getComponentsArray :: forall a. (Ix a) => Array a [a] -> [[a]]
 getComponentsArray graph =
   let bnds' = bounds graph
@@ -715,6 +740,7 @@ getComponentsArray graph =
 -- >>> import Data.Array.Unboxed ((!))
 -- >>> buildGrid ((0,0),(1,1)) ["ab","cd"] ! (0,1)
 -- 'b'
+{-# INLINE buildGrid #-}
 buildGrid :: (IArray UArray e, Ix i, Foldable t) => (i, i) -> t [e] -> UArray i e
 buildGrid bnds lst = listArray @UArray bnds $ concat lst
 
@@ -818,6 +844,7 @@ getNextMoves n m (r, c) =
 -- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
 -- >>> countGridComponentsDFS g '.' (\_ -> [])
 -- 4
+{-# INLINE countGridComponentsDFS #-}
 countGridComponentsDFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
 countGridComponentsDFS grid targetChar getNext = runST $ do
   let bnds' = bounds grid
@@ -846,6 +873,7 @@ countGridComponentsDFS grid targetChar getNext = runST $ do
 -- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
 -- >>> countGridComponentsBFS g '.' (\_ -> [])
 -- 4
+{-# INLINE countGridComponentsBFS #-}
 countGridComponentsBFS :: forall a. (Ix a) => UArray a Char -> Char -> (a -> [a]) -> Int
 countGridComponentsBFS grid targetChar getNext = runST $ do
   let bnds' = bounds grid
@@ -947,6 +975,7 @@ dirsLRUD = [(U, (-1, 0)), (D, (1, 0)), (L, (0, -1)), (R, (0, 1))]
 -- >>> let g = listArray ((0,0),(1,3)) ".#.#.#.#" :: UArray (Int,Int) Char
 -- >>> countGridIslands g (\_ -> [])
 -- 8
+{-# INLINE countGridIslands #-}
 countGridIslands :: forall a. (Ix a) => UArray a Char -> (a -> [a]) -> Int
 countGridIslands grid getNext =
   let bnds' = bounds grid
@@ -965,6 +994,7 @@ countGridIslands grid getNext =
 -- [[2,3,1]]
 -- >>> length $ sccFromAdj (1,3) (\v -> case v of 1 -> [2]; _ -> [])
 -- 3
+{-# INLINE sccFromAdj #-}
 sccFromAdj :: (Int, Int) -> (Int -> [Int]) -> [[Int]]
 sccFromAdj bnds getNext = runST do
   let (lo, hi) = bnds
@@ -1018,6 +1048,7 @@ sccFromAdj bnds getNext = runST do
 --
 -- >>> sccSizesFromAdj (1,3) (\v -> case v of 1 -> [2]; 2 -> [3]; 3 -> [1]; _ -> [])
 -- [3]
+{-# INLINE sccSizesFromAdj #-}
 sccSizesFromAdj :: (Int, Int) -> (Int -> [Int]) -> [Int]
 sccSizesFromAdj bnds getNext = map length (sccFromAdj bnds getNext)
 
@@ -1025,6 +1056,7 @@ sccSizesFromAdj bnds getNext = map length (sccFromAdj bnds getNext)
 --
 -- >>> sccPairCountFromAdj (1,3) (\v -> case v of 1 -> [2]; 2 -> [3]; 3 -> [1]; _ -> [])
 -- 3
+{-# INLINE sccPairCountFromAdj #-}
 sccPairCountFromAdj :: (Int, Int) -> (Int -> [Int]) -> Integer
 sccPairCountFromAdj bnds getNext =
   sum [k * (k - 1) `div` 2 | s <- sccFromAdj bnds getNext, let k = toInteger (length s)]
@@ -1077,6 +1109,7 @@ sccArray graph = sccFromAdj (bounds graph) (graph !)
 -- 3
 -- >>> subtreeSizes (1,3) adj 1 ! 2
 -- 1
+{-# INLINE subtreeSizes #-}
 subtreeSizes :: (Int, Int) -> (Int -> [Int]) -> Int -> UArray Int Int
 subtreeSizes bnds getNext root = runSTUArray do
   sz <- newArray bnds 1 :: ST s (STUArray s Int Int)
@@ -1178,6 +1211,7 @@ treeDiameter graph = (d, (u, v))
 --
 -- >>> treeDFS (buildG2 (1,4) [[1,2],[1,3],[3,4]]) 1 (const 1) (+)
 -- 4
+{-# INLINE treeDFS #-}
 treeDFS :: Array Int [Int] -> Int -> (Int -> a) -> (a -> a -> a) -> a
 treeDFS graph root initState merge = go (-1) root
   where
@@ -1192,6 +1226,7 @@ treeDFS graph root initState merge = go (-1) root
 -- 4
 -- >>> treeDPBFS (buildG2 (1,4) [[1,2],[1,3],[3,4]]) 1 (const 1) (+) ! 3
 -- 2
+{-# INLINE treeDPBFS #-}
 treeDPBFS :: Array Int [Int] -> Int -> (Int -> a) -> (a -> a -> a) -> Array Int a
 treeDPBFS graph root initState merge = runSTArray do
   let bnds = bounds graph
@@ -1330,6 +1365,7 @@ dijkstra g v0 n = f (Just (start, H.empty)) IS.empty dist0
 -- >>> let adj v = case v of 1 -> [(2,5),(3,10)]; 2 -> [(3,3)]; _ -> []
 -- >>> (IArr.!) (dijkstraST adj (1,3) [1]) 3
 -- 8
+{-# INLINE dijkstraST #-}
 dijkstraST :: (Ix v) => (v -> [(v, Int)]) -> (v, v) -> [v] -> UArray v Int
 dijkstraST nextStates (lower, upper) v0s = runSTUArray $ do
   dist <- newArray (lower, upper) maxBound

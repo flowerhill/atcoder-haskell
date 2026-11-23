@@ -22,14 +22,17 @@ import Foreign (FiniteBits (countLeadingZeros, finiteBitSize))
 -- (4,6)
 -- >>> trisect (0, 6) (\x -> abs (x - 3))
 -- (2,4)
+{-# INLINE trisect #-}
 trisect :: (Int, Int) -> (Int -> Int) -> (Int, Int)
-trisect (l, r) f
-  | r - l <= 2 = (l, r)
-  | f m1 > f m2 = trisect (m1, r) f
-  | otherwise = trisect (l, m2) f
+trisect (l0, r0) f = go l0 r0
   where
-    m1 = (l * 2 + r) `div` 3
-    m2 = (l + r * 2) `div` 3
+    go l r
+      | r - l <= 2 = (l, r)
+      | f m1 > f m2 = go m1 r
+      | otherwise = go l m2
+      where
+        m1 = (l * 2 + r) `div` 3
+        m2 = (l + r * 2) `div` 3
 
 -- | 素数判定（2以上を対象。1はTrueを返す点に注意）
 --
@@ -200,6 +203,7 @@ exEuclid = fn 1 0 0 1
 -- -5
 -- >>> sumOfGeo 7 2 0
 -- 0
+{-# INLINE sumOfGeo #-}
 sumOfGeo :: (Integral a, Integral b) => a -> a -> b -> a
 sumOfGeo a r n = L.foldl' (\s _ -> s * r + a) 0 [1 .. n]
 
@@ -218,6 +222,7 @@ sumOfGeo a r n = L.foldl' (\s _ -> s * r + a) 0 [1 .. n]
 -- 15
 -- >>> sumOfArith 7 2 0
 -- 0
+{-# INLINE sumOfArith #-}
 sumOfArith :: (Integral a, Integral b) => a -> a -> b -> a
 sumOfArith a d n
   | n <= 0 = 0
@@ -239,6 +244,7 @@ sumOfArith a d n
 -- 7
 -- >>> sumOfRange 5 3
 -- 0
+{-# INLINE sumOfRange #-}
 sumOfRange :: (Integral a) => a -> a -> a
 sumOfRange a b = sumOfArith a 1 (b - a + 1)
 
@@ -323,6 +329,7 @@ toBinary = L.unfoldr f
 -- [1,0,1]
 -- >>> toDigits 10 0
 -- [0]
+{-# INLINE toDigits #-}
 toDigits :: (Integral a) => a -> a -> [a]
 toDigits _ 0 = [0]
 toDigits n a = reverse $ L.unfoldr f a
@@ -338,6 +345,7 @@ toDigits n a = reverse $ L.unfoldr f a
 -- 255
 -- >>> fromDigits 2 [1,0,1 :: Int]
 -- 5
+{-# INLINE fromDigits #-}
 fromDigits :: (Foldable t, Num a) => a -> t a -> a
 fromDigits n = L.foldl' (\acc b -> acc * n + b) 0
 
@@ -355,6 +363,7 @@ fromDigits n = L.foldl' (\acc b -> acc * n + b) 0
 -- 0
 -- >>> readBase 2 (replicate 70 '1') :: Integer
 -- 1180591620717411303423
+{-# INLINE readBase #-}
 readBase :: (Integral a) => a -> String -> a
 readBase b = fromDigits b . map digit
   where
@@ -383,6 +392,7 @@ readBase b = fromDigits b . map digit
 -- "0"
 -- >>> showBase 2 (2 ^ 70 - 1 :: Integer)
 -- "1111111111111111111111111111111111111111111111111111111111111111111111"
+{-# INLINE showBase #-}
 showBase :: (Integral a) => a -> a -> String
 showBase b x
   | b < 2 || b > 36 = error $ "showBase: base " ++ show (toInteger b) ++ " out of range [2, 36]"

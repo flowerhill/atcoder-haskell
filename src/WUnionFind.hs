@@ -54,6 +54,7 @@ data WeightedUnionFind arr s i = WeightedUnionFind
 --   countWUF uf
 -- :}
 -- 4
+{-# INLINE newWUF #-}
 newWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -76,6 +77,7 @@ newWUF bnds = do
 --   relationWUF uf 1 2
 -- :}
 -- Just (-1,10)
+{-# INLINE newWUFST #-}
 newWUFST :: (Ix i, MArray (STUArray s) i (ST s)) => (i, i) -> ST s (WeightedUnionFind (STUArray s) s i)
 newWUFST = newWUF
 
@@ -88,26 +90,29 @@ newWUFST = newWUF
 -- >>> uniteDiffWUF uf 1 2 5
 -- >>> findWUF uf 2
 -- (1,1,5)
+{-# INLINE findWUF #-}
 findWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
   WeightedUnionFind arr (PrimState m) i ->
   i ->
   m (i, Int, Int)
-findWUF uf x = do
-  p <- readArray (wufParent uf) x
-  if p == x
-    then return (x, 1, 0)
-    else do
-      (r, sp, op) <- findWUF uf p
-      sx <- readArray (wufSign uf) x
-      ox <- readArray (wufOff uf) x
-      let !ns = sx * sp
-          !no = sx * op + ox
-      writeArray (wufParent uf) x r
-      writeArray (wufSign uf) x ns
-      writeArray (wufOff uf) x no
-      return (r, ns, no)
+findWUF uf = go
+  where
+    go x = do
+      p <- readArray (wufParent uf) x
+      if p == x
+        then return (x, 1, 0)
+        else do
+          (r, sp, op) <- go p
+          sx <- readArray (wufSign uf) x
+          ox <- readArray (wufOff uf) x
+          let !ns = sx * sp
+              !no = sx * op + ox
+          writeArray (wufParent uf) x r
+          writeArray (wufSign uf) x ns
+          writeArray (wufOff uf) x no
+          return (r, ns, no)
 
 -- | 要素の根を返す（経路圧縮あり）
 --
@@ -117,6 +122,7 @@ findWUF uf x = do
 -- >>> uniteDiffWUF uf 1 3 0
 -- >>> rootWUF uf 3
 -- 1
+{-# INLINE rootWUF #-}
 rootWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -133,6 +139,7 @@ rootWUF uf x = do
 -- >>> uniteWUF uf 1 2 (-1) 7
 -- >>> relationWUF uf 1 2
 -- Just (-1,7)
+{-# INLINE uniteWUF #-}
 uniteWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -206,6 +213,7 @@ uniteSumWUF uf x y v = uniteWUF uf x y (-1) v
 -- True
 -- >>> isSameWUF uf 1 3
 -- False
+{-# INLINE isSameWUF #-}
 isSameWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -225,6 +233,7 @@ isSameWUF uf x y = (==) <$> rootWUF uf x <*> rootWUF uf y
 -- Just (1,-5)
 -- >>> relationWUF uf 1 3
 -- Nothing
+{-# INLINE relationWUF #-}
 relationWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -252,6 +261,7 @@ relationWUF uf x y = do
 -- >>> uniteSumWUF uf 2 3 10
 -- >>> diffWUF uf 1 3
 -- Nothing
+{-# INLINE diffWUF #-}
 diffWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -275,6 +285,7 @@ diffWUF uf x y = do
 -- >>> uniteSumWUF uf 2 3 4  -- 和制約を重ねると符号が +1 に戻り、1-3 は差分制約になる
 -- >>> sumWUF uf 1 3
 -- Nothing
+{-# INLINE sumWUF #-}
 sumWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -297,6 +308,7 @@ sumWUF uf x y = do
 -- >>> uniteDiffWUF uf 2 3 5
 -- >>> getWeightWUF uf 3
 -- 8
+{-# INLINE getWeightWUF #-}
 getWeightWUF ::
   forall arr m i.
   (PrimMonad m, Ix i, MArray arr i m, MArray arr Int m) =>
@@ -315,6 +327,7 @@ getWeightWUF uf x = do
 -- >>> uniteDiffWUF uf 1 2 0
 -- >>> countWUF uf
 -- 4
+{-# INLINE countWUF #-}
 countWUF ::
   (PrimMonad m) =>
   WeightedUnionFind arr (PrimState m) i ->

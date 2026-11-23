@@ -19,6 +19,7 @@ import Data.Array.IArray (IArray, Ix, bounds, (!))
 -- Just 2
 -- >>> lookupGEIdxA 10 arr
 -- Nothing
+{-# INLINE lookupGEIdxA #-}
 lookupGEIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
 lookupGEIdxA x xs = do
   let (_, ub) = bounds xs
@@ -36,6 +37,7 @@ lookupGEIdxA x xs = do
 -- Just 3
 -- >>> lookupGTIdxA 9 arr
 -- Nothing
+{-# INLINE lookupGTIdxA #-}
 lookupGTIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
 lookupGTIdxA x xs = do
   let (_, ub) = bounds xs
@@ -53,6 +55,7 @@ lookupGTIdxA x xs = do
 -- Just 1
 -- >>> lookupLTIdxA 1 arr
 -- Nothing
+{-# INLINE lookupLTIdxA #-}
 lookupLTIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
 lookupLTIdxA x xs = do
   let (lb, _) = bounds xs
@@ -70,6 +73,7 @@ lookupLTIdxA x xs = do
 -- Just 2
 -- >>> lookupLEIdxA 0 arr
 -- Nothing
+{-# INLINE lookupLEIdxA #-}
 lookupLEIdxA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe i
 lookupLEIdxA x xs = do
   let (lb, _) = bounds xs
@@ -87,6 +91,7 @@ lookupLEIdxA x xs = do
 -- Just 5
 -- >>> lookupGEA 10 arr
 -- Nothing
+{-# INLINE lookupGEA #-}
 lookupGEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
 lookupGEA x xs = do
   let (_, ub) = bounds xs
@@ -104,6 +109,7 @@ lookupGEA x xs = do
 -- Just 7
 -- >>> lookupGTA 9 arr
 -- Nothing
+{-# INLINE lookupGTA #-}
 lookupGTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
 lookupGTA x xs = do
   let (_, ub) = bounds xs
@@ -121,6 +127,7 @@ lookupGTA x xs = do
 -- Just 3
 -- >>> lookupLTA 1 arr
 -- Nothing
+{-# INLINE lookupLTA #-}
 lookupLTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
 lookupLTA x xs = do
   let (lb, _) = bounds xs
@@ -138,6 +145,7 @@ lookupLTA x xs = do
 -- Just 5
 -- >>> lookupLEA 0 arr
 -- Nothing
+{-# INLINE lookupLEA #-}
 lookupLEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> Maybe e
 lookupLEA x xs = do
   let (lb, _) = bounds xs
@@ -155,6 +163,7 @@ lookupLEA x xs = do
 -- 2
 -- >>> boundGEA 10 arr
 -- 5
+{-# INLINE boundGEA #-}
 boundGEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
 boundGEA x xs = do
   let (lb, ub) = bounds xs
@@ -169,6 +178,7 @@ boundGEA x xs = do
 -- 3
 -- >>> boundGTA 9 arr
 -- 5
+{-# INLINE boundGTA #-}
 boundGTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
 boundGTA x xs = do
   let (lb, ub) = bounds xs
@@ -183,6 +193,7 @@ boundGTA x xs = do
 -- 1
 -- >>> boundLTA 1 arr
 -- -1
+{-# INLINE boundLTA #-}
 boundLTA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
 boundLTA x xs = do
   let (lb, ub) = bounds xs
@@ -197,6 +208,7 @@ boundLTA x xs = do
 -- 2
 -- >>> boundLEA 0 arr
 -- -1
+{-# INLINE boundLEA #-}
 boundLEA :: (IArray a e, Ix i, Integral i, Ord e) => e -> a i e -> i
 boundLEA x xs = do
   let (lb, ub) = bounds xs

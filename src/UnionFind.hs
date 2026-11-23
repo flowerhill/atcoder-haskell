@@ -28,6 +28,7 @@ data UnionFind arr s i = UnionFind
 --
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); getRoot uf (1,1) }
 -- (1,1)
+{-# INLINE newUF #-}
 newUF :: (Ix i, MArray (arr s) Int (ST s)) => (i, i) -> ST s (UnionFind arr s i)
 newUF bs = do
   let n = rangeSize bs
@@ -42,21 +43,26 @@ newUF bs = do
 -- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); getRootFlat uf 0 }
 -- 0
+{-# INLINE getRootFlat #-}
 getRootFlat :: (MArray (arr s) Int (ST s)) => UnionFind arr s i -> Int -> ST s Int
-getRootFlat uf k = do
-  p <- readArray (ufParent uf) k
-  if p == k
-    then return k
-    else do
-      r <- getRootFlat uf p
-      writeArray (ufParent uf) k r
-      return r
+getRootFlat uf = go
+  where
+    par = ufParent uf
+    go k = do
+      p <- readArray par k
+      if p == k
+        then return k
+        else do
+          r <- go p
+          writeArray par k r
+          return r
 
 -- | 要素の根（代表元）を経路圧縮しながら返す
 --
 -- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); unite uf (1,1) (2,2); getRoot uf (1,1) }
 -- (2,2)
+{-# INLINE getRoot #-}
 getRoot :: (Ix i, MArray (arr s) Int (ST s)) => UnionFind arr s i -> i -> ST s i
 getRoot uf x = do
   rFlat <- getRootFlat uf (index (ufBounds uf) x)
@@ -67,6 +73,7 @@ getRoot uf x = do
 -- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); unite uf (1,1) (1,2); unite uf (2,1) (2,2); sameUF uf (1,1) (2,1) }
 -- False
+{-# INLINE unite #-}
 unite :: (Ix i, MArray (arr s) Int (ST s)) => UnionFind arr s i -> i -> i -> ST s ()
 unite uf x y = do
   let bs = ufBounds uf
@@ -91,6 +98,7 @@ unite uf x y = do
 -- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); sameUF uf (1,1) (2,2) }
 -- False
+{-# INLINE sameUF #-}
 sameUF :: (Ix i, MArray (arr s) Int (ST s)) => UnionFind arr s i -> i -> i -> ST s Bool
 sameUF uf x y = do
   let bs = ufBounds uf
@@ -103,6 +111,7 @@ sameUF uf x y = do
 -- >>> import Data.Array.ST (STUArray)
 -- >>> runST $ do { uf <- newUF ((1,1),(2,2)) :: ST s (UnionFind STUArray s (Int,Int)); unite uf (1,1) (1,2); unite uf (1,1) (2,1); getSize uf (1,1) }
 -- 3
+{-# INLINE getSize #-}
 getSize :: (Ix i, MArray (arr s) Int (ST s)) => UnionFind arr s i -> i -> ST s Int
 getSize uf x = do
   r <- getRootFlat uf (index (ufBounds uf) x)
@@ -112,5 +121,6 @@ getSize uf x = do
 --
 -- >>> runST $ do { uf <- newUFST ((1,1),(2,2)); unite uf (1,1) (1,2); sameUF uf (1,1) (1,2) }
 -- True
+{-# INLINE newUFST #-}
 newUFST :: (Ix i) => (i, i) -> ST s (UnionFind STUArray s i)
 newUFST = newUF

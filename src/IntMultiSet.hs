@@ -147,6 +147,7 @@ deleteGEViewMS x s0 = loop s0 []
 --
 -- >>> toListMS (unionWithMS max (fromListMS [1,2,2]) (fromListMS [2,2,3]))
 -- [1,2,2,3]
+{-# INLINE unionWithMS #-}
 unionWithMS :: (Int -> Int -> Int) -> IntMultiSet -> IntMultiSet -> IntMultiSet
 unionWithMS f (IntMultiSet _ _ a) (IntMultiSet _ _ b) = IntMultiSet (IM.foldl' (+) 0 ab) (IM.size ab) ab
   where
@@ -164,6 +165,7 @@ unionMS = unionWithMS (+)
 --
 -- >>> toListMS (differenceWithMS (\a b -> if a > b then Just (a-b) else Nothing) (fromListMS [1,2,2,3]) (fromListMS [2,3,3]))
 -- [1,2]
+{-# INLINE differenceWithMS #-}
 differenceWithMS :: (Int -> Int -> Maybe Int) -> IntMultiSet -> IntMultiSet -> IntMultiSet
 differenceWithMS f (IntMultiSet _ _ a) (IntMultiSet _ _ b) = IntMultiSet (IM.foldl' (+) 0 c) (IM.size c) c
   where

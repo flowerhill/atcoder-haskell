@@ -155,6 +155,7 @@ powIntMod b e
 -- 332748118
 -- >>> invIntMod (toIntMod 3) * toIntMod 3 :: ModInt998244353
 -- 1
+{-# INLINE invIntMod #-}
 invIntMod :: forall p. (KnownNat p) => IntMod p -> IntMod p
 invIntMod x = case exEuclid v m of
   (1, s, _) -> toIntMod s
@@ -173,6 +174,7 @@ invIntMod x = case exEuclid v m of
 -- 39
 -- >>> sumOfGeoMod 1 1 5 :: ModInt998244353
 -- 5
+{-# INLINE sumOfGeoMod #-}
 sumOfGeoMod :: (KnownNat p) => IntMod p -> IntMod p -> Int -> IntMod p
 sumOfGeoMod a r n
   | r == 1 = a * toIntMod n
@@ -186,6 +188,7 @@ sumOfGeoMod a r n
 -- 8828235
 -- >>> sumOfArithMod 1 100000 :: ModInt1000000007
 -- 49965
+{-# INLINE sumOfArithMod #-}
 sumOfArithMod :: (KnownNat p) => Integer -> Integer -> IntMod p
 sumOfArithMod a b = fromInteger (sumOfRange a b)
 

@@ -5,6 +5,7 @@ module Geometry where
 --
 -- >>> manhattanDistance (0, 0) (3, 4 :: Int)
 -- 7
+{-# INLINE manhattanDistance #-}
 manhattanDistance :: (Num a) => (a, a) -> (a, a) -> a
 manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 
@@ -15,6 +16,7 @@ manhattanDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 -- 25
 -- >>> euclidDist2 (0, 0) (4000000000, 3000000000 :: Integer)
 -- 25000000000000000000
+{-# INLINE euclidDist2 #-}
 euclidDist2 :: (Num a) => (a, a) -> (a, a) -> a
 euclidDist2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
@@ -25,6 +27,7 @@ euclidDist2 (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 -- 5.0
 -- >>> euclidDist (0.5, 0) (2.0, 2.0 :: Double)
 -- 2.5
+{-# INLINE euclidDist #-}
 euclidDist :: (Real a) => (a, a) -> (a, a) -> Double
 euclidDist (x1, y1) (x2, y2) = sqrt $ euclidDist2 (realToFrac x1, realToFrac y1) (realToFrac x2, realToFrac y2)
 
@@ -36,6 +39,7 @@ euclidDist (x1, y1) (x2, y2) = sqrt $ euclidDist2 (realToFrac x1, realToFrac y1)
 -- 0
 -- >>> cross (-1, 1) (2, 2 :: Int)
 -- -4
+{-# INLINE cross #-}
 cross :: (Num a) => (a, a) -> (a, a) -> a
 cross (x1, y1) (x2, y2) = x1 * y2 - y1 * x2
 
@@ -47,6 +51,7 @@ cross (x1, y1) (x2, y2) = x1 * y2 - y1 * x2
 -- 23
 -- >>> dot (-1, 1) (2, 2 :: Int)
 -- 0
+{-# INLINE dot #-}
 dot :: (Num a) => (a, a) -> (a, a) -> a
 dot (x1, y1) (x2, y2) = x1 * x2 + y1 * y2
 

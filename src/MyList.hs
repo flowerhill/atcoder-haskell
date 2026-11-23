@@ -39,6 +39,7 @@ safeGetElement (x : xs) n
 -- Just 3
 -- >>> findIndexFrom 0 (> 10) [1,2,3]
 -- Nothing
+{-# INLINE findIndexFrom #-}
 findIndexFrom :: Int -> (a -> Bool) -> [a] -> Maybe Int
 findIndexFrom i f s =
   case findIndex f (drop i s) of
@@ -51,6 +52,7 @@ findIndexFrom i f s =
 -- Just 3
 -- >>> elemIndexFrom 0 'z' "abcbc"
 -- Nothing
+{-# INLINE elemIndexFrom #-}
 elemIndexFrom :: (Eq a) => Int -> a -> [a] -> Maybe Int
 elemIndexFrom i x = findIndexFrom i (== x)
 
@@ -70,6 +72,7 @@ combinations (x : xs) = [(x, y) | y <- xs] ++ combinations xs
 -- Just 5
 -- >>> safeMaximum ([] :: [Int])
 -- Nothing
+{-# INLINE safeMaximum #-}
 safeMaximum :: (Ord a) => [a] -> Maybe a
 safeMaximum lst
   | null lst = Nothing
@@ -81,6 +84,7 @@ safeMaximum lst
 -- Just (3,'b')
 -- >>> findOnFst (> 10) [(1,'a'),(3,'b')]
 -- Nothing
+{-# INLINE findOnFst #-}
 findOnFst :: (t -> Bool) -> [(t, b)] -> Maybe (t, b)
 findOnFst f = find (f . fst)
 
@@ -90,6 +94,7 @@ findOnFst f = find (f . fst)
 -- Just (2,3)
 -- >>> findOnSnd (> 10) [(1,1 :: Int),(2,2)]
 -- Nothing
+{-# INLINE findOnSnd #-}
 findOnSnd :: (Foldable t) => (b -> Bool) -> t (a, b) -> Maybe (a, b)
 findOnSnd f = find (f . snd)
 
@@ -148,6 +153,7 @@ combinationsN n as@(_ : xs)
 -- >>> import Control.Monad.Identity (runIdentity)
 -- >>> runIdentity $ mapAccumM (\s x -> return (s + x, s + x)) (0 :: Int) [1,2,3 :: Int]
 -- (6,[1,3,6])
+{-# INLINE mapAccumM #-}
 mapAccumM :: (Monad m, Traversable t) => (s -> a -> m (s, b)) -> s -> t a -> m (s, t b)
 mapAccumM f s t = do
   (t', s') <-
@@ -170,6 +176,7 @@ mapAccumM f s t = do
 -- >>> import Control.Monad.Identity (runIdentity)
 -- >>> runIdentity $ forAccumM (0 :: Int) [1,2,3 :: Int] (\s x -> return (s + x, x * 2))
 -- (6,[2,4,6])
+{-# INLINE forAccumM #-}
 forAccumM :: (Monad m, Traversable t) => s -> t a -> (s -> a -> m (s, b)) -> m (s, t b)
 forAccumM initial xs f = mapAccumM f initial xs
 
@@ -199,6 +206,7 @@ indexed = zip [1 ..]
 -- []
 -- >>> quicksort "haskell"
 -- "aehklls"
+{-# INLINE quicksort #-}
 quicksort :: (Ord a) => [a] -> [a]
 quicksort = V.toList . V.modify VAI.sort . V.fromList
 
@@ -231,6 +239,7 @@ swapList i j xs
 -- [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]
 -- >>> distinctPermutations [1,1,2 :: Int]
 -- [[1,1,2],[1,2,1],[2,1,1]]
+{-# INLINE distinctPermutations #-}
 distinctPermutations :: (Ord a) => [a] -> [[a]]
 distinctPermutations vs = permute (length vs) (sort vs)
   where
@@ -336,11 +345,9 @@ updateAt n newVal (x : xs)
 --
 -- >>> updateWhere (> 2) 0 [1,2,3,4 :: Int]
 -- [1,2,0,0]
+{-# INLINE updateWhere #-}
 updateWhere :: (a -> Bool) -> a -> [a] -> [a]
-updateWhere _ _ [] = []
-updateWhere pred newVal (x : xs)
-  | pred x = newVal : updateWhere pred newVal xs
-  | otherwise = x : updateWhere pred newVal xs
+updateWhere p newVal = map (\x -> if p x then newVal else x)
 
 -- | 複数の (インデックス, 値) ペアでリストを一括更新する。O(N + K)
 --
@@ -367,6 +374,7 @@ updateMultiple updates xs = V.toList $ v V.// filter (inBnds . fst) updates
 -- 3
 -- >>> countBy even [1,2,3,4 :: Int]
 -- 2
+{-# INLINE countBy #-}
 countBy :: (Foldable t) => (e -> Bool) -> t e -> Int
 countBy predicate = foldl' (\acc a -> if predicate a then acc + 1 else acc) 0
 

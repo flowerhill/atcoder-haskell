@@ -11,6 +11,7 @@ import qualified Data.List.NonEmpty as NE
 -- [(1,2),(2,1),(3,3)]
 -- >>> runLengthEncode ""
 -- []
+{-# INLINE runLengthEncode #-}
 runLengthEncode :: (Eq a) => [a] -> [(a, Int)]
 runLengthEncode = map (\g -> (NE.head g, NE.length g)) . NE.group
 

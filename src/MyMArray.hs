@@ -55,6 +55,7 @@ getRowAsIOArray n w arr = do
 -- ST版
 -- n: 抽出したい行番号
 -- w: 列の最大インデックス
+{-# INLINE getRowAsSTUArray #-}
 getRowAsSTUArray :: (MArray a1 Int (ST s), Ix a2) => a2 -> Int -> a1 (a2, Int) Int -> ST s (STUArray s Int Int)
 getRowAsSTUArray n w arr = do
   -- 新しい一次元配列を作成
@@ -80,6 +81,7 @@ getRowAsSTUArray n w arr = do
 -- (True,99)
 -- >>> safeWriteArray a 5 99
 -- False
+{-# INLINE safeWriteArray #-}
 safeWriteArray :: (Ix i, MArray a e m) => a i e -> i -> e -> m Bool
 safeWriteArray arr idx val = do
   bounds' <- getBounds arr
@@ -97,6 +99,7 @@ safeWriteArray arr idx val = do
 -- Just 20
 -- >>> safeReadArray a 5
 -- Nothing
+{-# INLINE safeReadArray #-}
 safeReadArray :: (Ix i, MArray a e m) => a i e -> i -> m (Maybe e)
 safeReadArray arr idx = do
   bounds' <- getBounds arr
@@ -111,6 +114,7 @@ safeReadArray arr idx = do
 -- >>> import Data.Array.ST (runSTUArray, writeArray); import Data.Array.Unboxed ((!))
 -- >>> runSTUArray (newSTUArray (0,2) False >>= \a -> writeArray a 1 True >> return a) ! 1
 -- True
+{-# INLINE newSTUArray #-}
 newSTUArray :: (Ix i, MArray (STUArray s) e (ST s)) => (i, i) -> e -> ST s (STUArray s i e)
 newSTUArray = newArray
 
@@ -119,5 +123,6 @@ newSTUArray = newArray
 -- >>> import Data.Array.ST (runSTUArray); import Data.Array.Unboxed ((!))
 -- >>> runSTUArray (newSTUListArray (0, 2) [1, 2, 3 :: Int]) ! 2
 -- 3
+{-# INLINE newSTUListArray #-}
 newSTUListArray :: (Ix i, MArray (STUArray s) e (ST s)) => (i, i) -> [e] -> ST s (STUArray s i e)
 newSTUListArray = newListArray

@@ -17,6 +17,7 @@ import Data.Array.IArray
 -- array (0,2) [(0,'.'),(1,'b'),(2,'.')]
 -- >>> arrayWithDefault False ((1, 1), (2, 2)) [((2, 1), True)] :: Array (Int, Int) Bool
 -- array ((1,1),(2,2)) [((1,1),False),((1,2),False),((2,1),True),((2,2),False)]
+{-# INLINE arrayWithDefault #-}
 arrayWithDefault :: (IArray a e, Ix i) => e -> (i, i) -> [(i, e)] -> a i e
 arrayWithDefault def = accumArray (\_ x -> x) def
 
@@ -26,6 +27,7 @@ arrayWithDefault def = accumArray (\_ x -> x) def
 -- >>> let arr = listArray (0, 4) [1, 3, 2, 5, 4] :: Array Int Int
 -- >>> findArrayIndices (> 2) arr
 -- [1,3,4]
+{-# INLINE findArrayIndices #-}
 findArrayIndices :: (IArray a e, Ix i) => (e -> Bool) -> a i e -> [i]
 findArrayIndices predicate as = [i | (i, e) <- assocs as, predicate e]
 
@@ -35,6 +37,7 @@ findArrayIndices predicate as = [i | (i, e) <- assocs as, predicate e]
 -- >>> let arr = listArray (1, 3) [10, 20, 30] :: Array Int Int
 -- >>> getArrayValues arr
 -- [10,20,30]
+{-# INLINE getArrayValues #-}
 getArrayValues :: (IArray a1 a2, Ix i) => a1 i a2 -> [a2]
 getArrayValues as = [e | (_, e) <- assocs as]
 
@@ -44,6 +47,7 @@ getArrayValues as = [e | (_, e) <- assocs as]
 -- >>> let arr = listArray (1, 3) [10, 20, 30] :: Array Int Int
 -- >>> getArrayKeys arr
 -- [1,2,3]
+{-# INLINE getArrayKeys #-}
 getArrayKeys :: (IArray a1 e, Ix a2) => a1 a2 e -> [a2]
 getArrayKeys as = [k | (k, _) <- assocs as]
 
@@ -55,6 +59,7 @@ getArrayKeys as = [k | (k, _) <- assocs as]
 -- Just 30
 -- >>> safeRead arr (-1)
 -- Nothing
+{-# INLINE safeRead #-}
 safeRead :: (IArray a e, Ix i) => a i e -> i -> Maybe e
 safeRead arr idx =
   if inRange (bounds arr) idx

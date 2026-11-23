@@ -49,6 +49,7 @@ ldsLengths = VU.reverse . lisLengths . VU.reverse
 --
 -- >>> lisLengthsBy (>=) (VU.fromList [2,5,3,4,1])
 -- [1,2,2,3,1]
+{-# INLINE lisLengthsBy #-}
 lisLengthsBy :: (Int -> Int -> Bool) -> VU.Vector Int -> VU.Vector Int
 lisLengthsBy cmp xs = runST $ do
   tails <- VUM.replicate n (maxBound :: Int)
